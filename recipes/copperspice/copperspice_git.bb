@@ -88,6 +88,7 @@ inherit cmake
 # Specify any options you want to pass to cmake using EXTRA_OECMAKE:
 TARGET_CXXFLAGS += " ${@ "-D__ARM_ARCH_5__=5" if d.getVar('TARGET_ARCH') == 'arm' else "" } -Wno-psabi "
 TARGET_CFLAGS += " ${@ "-D__ARM_ARCH_5__=5" if d.getVar('TARGET_ARCH') == 'arm' else "" } -Wno-psabi "
+CXXFLAGS:remove = "-fvisibility-inlines-hidden"
 
 OECMAKE_GENERATOR = "Unix Makefiles"
 
@@ -119,6 +120,9 @@ EXTRA_OECMAKE:class-native = " \
     -DWITH_NETWORK=NO \
     -DWITH_GUI=NO \
 "
+
+FILES:${PN} += "${libdir}/*"
+
 
 EXTRA_OECMAKE:class-nativesdk = " \
     -DCMAKE_VERBOSE_MAKEFILE=ON \
