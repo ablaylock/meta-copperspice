@@ -70,13 +70,12 @@ LIC_FILES_CHKSUM = "file://license/LGPL_EXCEPTION.txt;md5=411080a56ff917a5a1aa08
 SRC_URI = "git://github.com/copperspice/copperspice.git;protocol=https;branch=master"
 
 # Modify these as desired
-PV = "1.0.10+git${SRCPV}"
+PV = "1.9.2+git${SRCPV}"
 SRCREV = "036ae96b22649e0e17976d8c206876ae5e68030c"
 
 S = "${WORKDIR}/git"
 
-#DEPENDS:class-target = "openssl fontconfig libxcb alsa-lib jpeg cups glib-2.0 libxml2 libx11 libxcursor libxi virtual/libgl zlib libxcb virtual/libiconv virtual/xserver xcb-util-keysyms xcb-util-renderutil libxinerama libxkbcommon xcb-util libx11-native libxcb-native libxi-native xcb-util-image xcb-util-wm copperspice-native"
-DEPENDS:class-target = "openssl fontconfig libxcb alsa-lib jpeg cups glib-2.0 libxml2 libx11 libxcursor libxi virtual/libgl zlib libxcb virtual/libiconv xcb-util-keysyms xcb-util-renderutil libxinerama libxkbcommon xcb-util xcb-util-image xcb-util-wm copperspice-native"
+DEPENDS:class-target = "openssl fontconfig libxcb alsa-lib jpeg cups glib-2.0 libxml2 libx11 libxcursor libxi virtual/libgl zlib libxcb virtual/libiconv xcb-util-keysyms xcb-util-renderutil libxinerama libxkbcommon xcb-util xcb-util-image xcb-util-wm copperspice-native sqlite"
 
 DEPENDS:class-native = " glib-2.0-native "
 DEPENDS:class-nativesdk = " nativesdk-glib-2.0 "
@@ -94,16 +93,16 @@ OECMAKE_GENERATOR = "Unix Makefiles"
 
 EXTRA_OECMAKE:class-target = " \
     -DCMAKE_VERBOSE_MAKEFILE=ON \
-    -DWITH_OPENGL=NO \
     -DWITH_SCRIPT=NO \
     -DWITH_VULKAN=NO \
     -DWITH_WEBKIT=NO \
-    -DWITH_MULTIMEDIA=NO \
-    -DWITH_XMLPATTERNS=NO \
-    -DWITH_SQL=NO \
-    -DWITH_SVG=NO \
-    -DWITH_NETWORK=NO \
 "
+#    -DWITH_SQL=NO \
+#    -DWITH_OPENGL=NO \
+#    -DWITH_MULTIMEDIA=NO \
+#    -DWITH_XMLPATTERNS=NO \
+#    -DWITH_SVG=NO \
+#    -DWITH_NETWORK=NO \
 #    -DWITH_GUI=NO \
 #"
 
@@ -123,6 +122,8 @@ EXTRA_OECMAKE:class-native = " \
 
 FILES:${PN} += "${libdir}/*"
 
+LEAD_SONAME = "libCs.*\.so"
+
 
 EXTRA_OECMAKE:class-nativesdk = " \
     -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -139,7 +140,8 @@ EXTRA_OECMAKE:class-nativesdk = " \
 "
 
 # Allow skipping for now while debugging the build linking issues
+# This could be corrected by patching the CMakeLists.txt files to use:
+# set_target_properties(Cs[Lib] PROPERTIES VERSION ${BUILD_ABI}.${BUILD_MINOR} SOVERSION ${BUILD_ABI})
 INSANE_SKIP:${PN} += " ldflags"
-#INSANE_SKIP_${PN} += " ldflags"
 SOLIBS = ".so"
 FILES_SOLIBSDEV = ""
