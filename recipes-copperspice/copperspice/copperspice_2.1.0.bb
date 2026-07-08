@@ -16,7 +16,10 @@ LIC_FILES_CHKSUM = " \
 # one so the default S = "${UNPACKDIR}/${BP}" works.
 # Upstream publishes no checksums for its tarballs. This sha256 was computed
 # from the tarball downloaded from upstream on 2026-07-08.
-SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}.tar.bz2;subdir=${BP}"
+SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}.tar.bz2;subdir=${BP} \
+           file://0001-cmake-support-prebuilt-host-tools-in-the-CopperSpice.patch \
+           file://0002-cmake-support-prebuilt-host-tools-in-the-exported-co.patch \
+           "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
 inherit cmake pkgconfig features_check

@@ -1,0 +1,47 @@
+From baedd0dc003cd7f52061bca7ae633be05b3f4cf5 Mon Sep 17 00:00:00 2001
+From: Allen Blay <alblay.lhs@gmail.com>
+Date: Wed, 8 Jul 2026 12:36:00 -0600
+Subject: [PATCH] cmake: support prebuilt host tools in the exported config
+
+Downstream projects process .ui/.qrc/.ts files through the
+CopperSpice::uic/rcc/lrelease IMPORTED targets, which point into the
+CopperSpice installation. When that installation was cross compiled the
+tools can not run on the build machine. Honor the same CS_TOOL_* variables
+as the CopperSpice build itself and repoint the IMPORTED targets.
+Behavior is unchanged when they are not set.
+
+Upstream-Status: Pending [https://github.com/copperspice/copperspice]
+---
+ cmake/CopperSpiceConfig.cmake | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/cmake/CopperSpiceConfig.cmake b/cmake/CopperSpiceConfig.cmake
+index 308f036..8e4a5fc 100644
+--- a/cmake/CopperSpiceConfig.cmake
++++ b/cmake/CopperSpiceConfig.cmake
+@@ -42,6 +42,25 @@ include("${COPPERSPICE_CMAKE_DIR}/CopperSpiceBinaryTargets.cmake")
+ include("${COPPERSPICE_CMAKE_DIR}/CopperSpiceMacros.cmake")
+ include("${COPPERSPICE_CMAKE_DIR}/CopperSpiceDeploy.cmake")
+ 
++# cross compiling: CS_TOOL_* may be set to prebuilt host tools, which are
++# then used instead of the tools from this installation (which may not be
++# able to execute on the build machine)
++foreach(_cs_tool uic rcc lrelease lconvert lupdate cs_wayland_scanner)
++   string(TOUPPER ${_cs_tool} _cs_tool_uc)
++
++   if(CS_TOOL_${_cs_tool_uc} AND TARGET CopperSpice::${_cs_tool})
++      get_target_property(_cs_tool_configs CopperSpice::${_cs_tool} IMPORTED_CONFIGURATIONS)
++
++      set_target_properties(CopperSpice::${_cs_tool} PROPERTIES
++         IMPORTED_LOCATION "${CS_TOOL_${_cs_tool_uc}}")
++
++      foreach(_cs_config ${_cs_tool_configs})
++         set_target_properties(CopperSpice::${_cs_tool} PROPERTIES
++            IMPORTED_LOCATION_${_cs_config} "${CS_TOOL_${_cs_tool_uc}}")
++      endforeach()
++   endif()
++endforeach()
++
+ # IMPORTED targets
+ set(COPPERSPICE_INCLUDES @CMAKE_INSTALL_FULL_INCLUDEDIR@)
+ set(COPPERSPICE_LIBRARIES)

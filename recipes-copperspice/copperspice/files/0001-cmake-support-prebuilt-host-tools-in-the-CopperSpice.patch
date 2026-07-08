@@ -1,0 +1,109 @@
+From 7a47fbd30cc058009ae3bc550d2d0b211dade086 Mon Sep 17 00:00:00 2001
+From: Allen Blay <alblay.lhs@gmail.com>
+Date: Wed, 8 Jul 2026 12:35:38 -0600
+Subject: [PATCH] cmake: support prebuilt host tools in the CopperSpice build
+
+When cross compiling, the freshly built uic/rcc/lrelease/cs_wayland_scanner
+are target binaries and can not run on the build machine. Allow
+CS_TOOL_UIC, CS_TOOL_RCC, CS_TOOL_LRELEASE and CS_TOOL_CS_WAYLAND_SCANNER
+to be set to prebuilt host tools. Behavior is unchanged when they are not
+set.
+
+Upstream-Status: Pending [https://github.com/copperspice/copperspice]
+---
+ cmake/modules/ResourceMacros.cmake | 33 ++++++++++++++++++++----------
+ 1 file changed, 22 insertions(+), 11 deletions(-)
+
+diff --git a/cmake/modules/ResourceMacros.cmake b/cmake/modules/ResourceMacros.cmake
+index bf7d908..95c24f7 100644
+--- a/cmake/modules/ResourceMacros.cmake
++++ b/cmake/modules/ResourceMacros.cmake
+@@ -36,6 +36,17 @@ if(NOT WINDRES_EXECUTABLE)
+    set(WINDRES_EXECUTABLE windres)
+ endif()
+ 
++# cross compiling: CS_TOOL_* may be set to prebuilt host tools, which are
++# then run instead of the freshly built target tools (target tools can not
++# execute on the build machine)
++foreach(_cs_tool uic rcc lrelease cs_wayland_scanner)
++   string(TOUPPER ${_cs_tool} _cs_tool_uc)
++
++   if(NOT CS_TOOL_${_cs_tool_uc})
++      set(CS_TOOL_${_cs_tool_uc} ${_cs_tool}${TOOLS_SUFFIX})
++   endif()
++endforeach()
++
+ macro(MACRO_GENERATE_PUBLIC PUBLIC_INCLUDES SUBDIR)
+    foreach(pubheader ${PUBLIC_INCLUDES})
+       string(TOLOWER ${pubheader} pubname)
+@@ -93,7 +104,7 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND rcc${TOOLS_SUFFIX} "${resource}" -o "${resource_out}" -name ${resource_name}
++            COMMAND ${CS_TOOL_RCC} "${resource}" -o "${resource_out}" -name ${resource_name}
+             MAIN_DEPENDENCY ${resource}
+          )
+ 
+@@ -102,7 +113,7 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND lrelease${TOOLS_SUFFIX} "${resource}" -qm "${resource_out}"
++            COMMAND ${CS_TOOL_LRELEASE} "${resource}" -qm "${resource_out}"
+             MAIN_DEPENDENCY ${resource}
+          )
+ 
+@@ -111,7 +122,7 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND uic${TOOLS_SUFFIX} "${resource}" -o "${resource_out}"
++            COMMAND ${CS_TOOL_UIC} "${resource}" -o "${resource_out}"
+             MAIN_DEPENDENCY ${resource}
+          )
+ 
+@@ -125,8 +136,8 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND cs_wayland_scanner${TOOLS_SUFFIX} server-header "${resource}" "${resource_out}"
+-            DEPENDS cs_wayland_scanner${TOOLS_SUFFIX}
++            COMMAND ${CS_TOOL_CS_WAYLAND_SCANNER} server-header "${resource}" "${resource_out}"
++            DEPENDS ${CS_TOOL_CS_WAYLAND_SCANNER}
+             MAIN_DEPENDENCY "${resource}"
+          )
+ 
+@@ -137,8 +148,8 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND cs_wayland_scanner${TOOLS_SUFFIX} client-header "${resource}" "${resource_out}"
+-            DEPENDS cs_wayland_scanner${TOOLS_SUFFIX}
++            COMMAND ${CS_TOOL_CS_WAYLAND_SCANNER} client-header "${resource}" "${resource_out}"
++            DEPENDS ${CS_TOOL_CS_WAYLAND_SCANNER}
+             MAIN_DEPENDENCY "${resource}"
+          )
+ 
+@@ -149,8 +160,8 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND cs_wayland_scanner${TOOLS_SUFFIX} server-code "${resource}" "${resource_out}"
+-            DEPENDS cs_wayland_scanner${TOOLS_SUFFIX}
++            COMMAND ${CS_TOOL_CS_WAYLAND_SCANNER} server-code "${resource}" "${resource_out}"
++            DEPENDS ${CS_TOOL_CS_WAYLAND_SCANNER}
+             MAIN_DEPENDENCY "${resource}"
+          )
+ 
+@@ -161,8 +172,8 @@ function(FUNCTION_GENERATE_RESOURCES LIB_APP)
+ 
+          add_custom_command(
+             OUTPUT ${resource_out}
+-            COMMAND cs_wayland_scanner${TOOLS_SUFFIX} client-code "${resource}" "${resource_out}"
+-            DEPENDS cs_wayland_scanner${TOOLS_SUFFIX}
++            COMMAND ${CS_TOOL_CS_WAYLAND_SCANNER} client-code "${resource}" "${resource_out}"
++            DEPENDS ${CS_TOOL_CS_WAYLAND_SCANNER}
+             MAIN_DEPENDENCY "${resource}"
+          )
+ 
