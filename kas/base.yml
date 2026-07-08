@@ -1,0 +1,43 @@
+# Pins the Yocto wrynose upstreams. The poky combo repo is deprecated in
+# wrynose - openembedded-core + bitbake + meta-yocto replace it.
+header:
+  version: 14
+
+build_system: openembedded
+
+distro: poky
+target: copperspice-demo-image
+
+repos:
+  meta-copperspice:
+
+  openembedded-core:
+    url: "https://github.com/openembedded/openembedded-core.git"
+    branch: wrynose
+    commit: 5d1aa5c806c061a2994f4decb59016610f093213
+    layers:
+      meta:
+
+  bitbake:
+    url: "https://github.com/openembedded/bitbake.git"
+    branch: "2.18"
+    commit: acfe02fa38b5da9e6a36c6cedcf91d4fcbefbfbd
+    layers:
+      ".": disabled
+
+  meta-yocto:
+    url: "https://github.com/yoctoproject/meta-yocto.git"
+    branch: wrynose
+    commit: 24c24cef5d1523fefe43a3e3d34667b37ae551f3
+    layers:
+      meta-poky:
+
+local_conf_header:
+  copperspice-caches: |
+    DL_DIR = "${TOPDIR}/../downloads"
+    SSTATE_DIR = "${TOPDIR}/../sstate-cache"
+  copperspice-ram: |
+    # moderate overall parallelism to bound RAM usage; the copperspice
+    # recipe caps its own PARALLEL_MAKE further (~4 GB per compile thread)
+    BB_NUMBER_THREADS = "8"
+    PARALLEL_MAKE = "-j 16"
