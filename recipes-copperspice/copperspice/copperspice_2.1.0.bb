@@ -71,6 +71,17 @@ EXTRA_OECMAKE:class-target = " \
     -DWITH_VULKAN=NO \
 "
 
+# When cross compiling, CopperSpice's own build runs uic/rcc/lrelease to
+# process its .ui/.qrc/.ts files - use the host tools from
+# copperspice-native (the CS_TOOL_* variables are added by our patches).
+# cs_wayland_scanner is not needed: no wayland libs are in DEPENDS, so the
+# wayland platform plugin is never enabled.
+EXTRA_OECMAKE:class-target += " \
+    -DCS_TOOL_UIC=${STAGING_BINDIR_NATIVE}/uic \
+    -DCS_TOOL_RCC=${STAGING_BINDIR_NATIVE}/rcc \
+    -DCS_TOOL_LRELEASE=${STAGING_BINDIR_NATIVE}/lrelease \
+"
+
 # native/nativesdk builds exist to provide the build tools (uic, rcc,
 # lrelease, lconvert, lupdate); those need only CsCore and CsXml
 CS_FEATURES_OFF = " \
