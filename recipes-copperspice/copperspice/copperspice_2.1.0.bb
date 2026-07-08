@@ -1,0 +1,87 @@
+SUMMARY = "CopperSpice C++ cross-platform GUI library"
+DESCRIPTION = "CopperSpice is a set of C++ libraries used to develop \
+cross-platform GUI applications. It began as a fork of Qt 4.8 and was \
+rewritten to use modern C++ (currently C++20) instead of moc-generated code."
+HOMEPAGE = "https://www.copperspice.com"
+BUGTRACKER = "https://github.com/copperspice/copperspice/issues"
+
+LICENSE = "LGPL-2.1-only"
+LIC_FILES_CHKSUM = " \
+    file://license/LICENSE.LGPL;md5=7266a93b753b03bc5f00522e65722b79 \
+    file://license/LGPL_EXCEPTION.txt;md5=f983e0c26cbfd50b8721a4f058fb152c \
+    file://license/LICENSE.FDL;md5=92a9c8f80b75e6d5fcf0416c1ad9e667 \
+"
+
+# The release tarball unpacks bare (no top-level directory); subdir= gives it
+# one so the default S = "${UNPACKDIR}/${BP}" works.
+# Upstream publishes no checksums for its tarballs. This sha256 was computed
+# from the tarball downloaded from upstream on 2026-07-08.
+SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}.tar.bz2;subdir=${BP}"
+SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
+
+inherit cmake pkgconfig features_check
+
+REQUIRED_DISTRO_FEATURES:class-target = "x11 opengl"
+
+DEPENDS:class-target = " \
+    copperspice-native \
+    alsa-lib \
+    cups \
+    fontconfig \
+    freetype \
+    glib-2.0 \
+    jpeg \
+    libx11 \
+    libxcb \
+    libxcursor \
+    libxi \
+    libxinerama \
+    libxkbcommon \
+    libxml2 \
+    openssl \
+    sqlite3 \
+    virtual/libgl \
+    virtual/libiconv \
+    xcb-util \
+    xcb-util-image \
+    xcb-util-keysyms \
+    xcb-util-renderutil \
+    xcb-util-wm \
+    zlib \
+"
+DEPENDS:class-native = "glib-2.0-native"
+DEPENDS:class-nativesdk = "nativesdk-glib-2.0"
+
+# Yocto's default -fvisibility-inlines-hidden breaks CsGui linking
+# (confirmed: https://forum.copperspice.com/viewtopic.php?t=4121)
+CXXFLAGS:remove = "-fvisibility-inlines-hidden"
+
+# CopperSpice compile units need roughly 4 GB of RAM per thread; cap the
+# make-level parallelism for this recipe (applies to all class variants)
+PARALLEL_MAKE = "-j 6"
+
+# Target build enables everything KitchenSink links against. WebKit stays
+# off (KitchenSink's CsWebKit use is disabled upstream); no Vulkan in the
+# QEMU images.
+EXTRA_OECMAKE:class-target = " \
+    -DWITH_WEBKIT=NO \
+    -DWITH_VULKAN=NO \
+"
+
+# native/nativesdk builds exist to provide the build tools (uic, rcc,
+# lrelease, lconvert, lupdate); those need only CsCore and CsXml
+CS_FEATURES_OFF = " \
+    -DWITH_GUI=NO \
+    -DWITH_MULTIMEDIA=NO \
+    -DWITH_NETWORK=NO \
+    -DWITH_OPENGL=NO \
+    -DWITH_SQL=NO \
+    -DWITH_SVG=NO \
+    -DWITH_VULKAN=NO \
+    -DWITH_WEBKIT=NO \
+    -DWITH_XMLPATTERNS=NO \
+"
+EXTRA_OECMAKE:class-native = "${CS_FEATURES_OFF}"
+EXTRA_OECMAKE:class-nativesdk = "${CS_FEATURES_OFF}"
+
+BBCLASSEXTEND = "native nativesdk"
