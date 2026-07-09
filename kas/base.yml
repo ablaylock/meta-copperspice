@@ -41,3 +41,8 @@ local_conf_header:
     # recipe caps its own PARALLEL_MAKE further (~4 GB per compile thread)
     BB_NUMBER_THREADS = "8"
     PARALLEL_MAKE = "-j 16"
+  copperspice-runqemu: |
+    # wrynose only emits ext4.zst, which runqemu refuses outside snapshot
+    # mode; also produce plain ext4 and boot that for the GUI gates
+    IMAGE_FSTYPES:append = " ext4"
+    QB_DEFAULT_FSTYPE = "ext4"
