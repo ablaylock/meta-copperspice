@@ -66,7 +66,7 @@ CXXFLAGS:remove = "-fvisibility-inlines-hidden"
 
 # CopperSpice compile units need roughly 4 GB of RAM per thread; cap the
 # make-level parallelism for this recipe (applies to all class variants)
-PARALLEL_MAKE = "-j 8"
+PARALLEL_MAKE = "-j 6"
 
 # Target build enables everything KitchenSink links against. WebKit stays
 # off (KitchenSink's CsWebKit use is disabled upstream); no Vulkan in the
