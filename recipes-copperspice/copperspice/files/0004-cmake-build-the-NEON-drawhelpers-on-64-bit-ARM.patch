@@ -1,0 +1,46 @@
+From 59cc9275263b3a36b81dc56c5b6af889a7b9c388 Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Thu, 9 Jul 2026 04:43:21 -0600
+Subject: [PATCH] cmake: build the NEON drawhelpers on 64 bit ARM
+
+qimage_conversions.cpp and qdrawhelper_p.h users reference the NEON
+routines whenever the compiler defines __ARM_NEON__, which is always
+the case on aarch64, but painting.cmake and image.cmake only compile
+qdrawhelper_neon.cpp / qimage_neon.cpp when CMAKE_SYSTEM_PROCESSOR
+matches "arm", which "aarch64" does not. Both source files already
+carry Q_PROCESSOR_ARM_64 code paths, so widen the match. Fixes
+undefined references to qt_memfill32 and convert_RGB888_to_RGB32_neon
+when linking CsGui for aarch64.
+
+Upstream-Status: Pending
+---
+ src/gui/image/image.cmake       | 2 +-
+ src/gui/painting/painting.cmake | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/gui/image/image.cmake b/src/gui/image/image.cmake
+index 331e135..cdc6cec 100644
+--- a/src/gui/image/image.cmake
++++ b/src/gui/image/image.cmake
+@@ -222,7 +222,7 @@ if (NOT ${JPEG_FOUND})
+    )
+ endif()
+ 
+-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
++if(CMAKE_SYSTEM_PROCESSOR MATCHES "(arm|aarch64)")
+    target_sources(CsGui
+       PRIVATE
+       ${CMAKE_CURRENT_SOURCE_DIR}/image/qimage_neon.cpp
+diff --git a/src/gui/painting/painting.cmake b/src/gui/painting/painting.cmake
+index a9ec02f..58f8169 100644
+--- a/src/gui/painting/painting.cmake
++++ b/src/gui/painting/painting.cmake
+@@ -141,7 +141,7 @@ target_sources(CsGui
+    ${CMAKE_CURRENT_SOURCE_DIR}/painting/qwidgetbackingstore.cpp
+ )
+ 
+-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
++if(CMAKE_SYSTEM_PROCESSOR MATCHES "(arm|aarch64)")
+    target_sources(CsGui
+       PRIVATE
+       ${CMAKE_CURRENT_SOURCE_DIR}/painting/qdrawhelper_neon.cpp

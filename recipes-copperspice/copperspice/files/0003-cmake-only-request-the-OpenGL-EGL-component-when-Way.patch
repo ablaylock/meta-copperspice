@@ -1,0 +1,37 @@
+From a81fa2be7875a9c21effa5ec8ab8d5f8dbf3ece9 Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Thu, 9 Jul 2026 04:42:49 -0600
+Subject: [PATCH] cmake: only request the OpenGL EGL component when Wayland is
+ found
+
+EGL is used solely by the Wayland display plugin. On systems with
+legacy (non GLVND) Mesa the EGL component request makes FindOpenGL
+fail, and since OPENGL_USE_EGL persists across calls the later
+unqualified find_package(OpenGL) fails too, leaving
+OPENGL_LIBRARIES empty and CsGui unlinkable.
+
+Upstream-Status: Pending
+---
+ CMakeLists.txt | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 901cdcd..c1096df 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -589,7 +589,14 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+          TYPE RECOMMENDED
+       )
+ 
+-      find_package(OpenGL COMPONENTS EGL)
++      if (Wayland_FOUND)
++         # EGL is only used by the Wayland display plugin. Requesting the
++         # EGL component makes FindOpenGL require the GLVND libOpenGL
++         # library, which systems with legacy (non-GLVND) Mesa do not
++         # have, and the failure also breaks the later unqualified
++         # find_package(OpenGL) call because OPENGL_USE_EGL persists.
++         find_package(OpenGL COMPONENTS EGL)
++      endif()
+    endif()
+ 
+    if (WITH_MULTIMEDIA)

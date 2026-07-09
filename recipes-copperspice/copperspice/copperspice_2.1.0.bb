@@ -19,6 +19,8 @@ LIC_FILES_CHKSUM = " \
 SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}.tar.bz2;subdir=${BP} \
            file://0001-cmake-support-prebuilt-host-tools-in-the-CopperSpice.patch \
            file://0002-cmake-support-prebuilt-host-tools-in-the-exported-co.patch \
+           file://0003-cmake-only-request-the-OpenGL-EGL-component-when-Way.patch \
+           file://0004-cmake-build-the-NEON-drawhelpers-on-64-bit-ARM.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
@@ -68,9 +70,14 @@ PARALLEL_MAKE = "-j 6"
 # Target build enables everything KitchenSink links against. WebKit stays
 # off (KitchenSink's CsWebKit use is disabled upstream); no Vulkan in the
 # QEMU images.
+# The wayland platform plugin would need cs_wayland_scanner at build
+# time (not provided by copperspice-native) and wayland libs can leak
+# into the sysroot transitively via mesa - disable detection so the
+# plugin state is deterministic.
 EXTRA_OECMAKE:class-target = " \
     -DWITH_WEBKIT=NO \
     -DWITH_VULKAN=NO \
+    -DCMAKE_DISABLE_FIND_PACKAGE_Wayland=TRUE \
 "
 
 # When cross compiling, CopperSpice's own build runs uic/rcc/lrelease to
