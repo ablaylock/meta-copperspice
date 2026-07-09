@@ -16,3 +16,10 @@ EXTRA_OECMAKE:append = " \
     -DCS_TOOL_LCONVERT=${STAGING_BINDIR_NATIVE}/lconvert \
     -DCS_TOOL_LUPDATE=${STAGING_BINDIR_NATIVE}/lupdate \
 "
+
+# rcc records the absolute path of every input file as a comment in its
+# generated qrc_*.cpp; those files ship in ${PN}-src and trip the
+# buildpaths QA check, so scrub the TMPDIR prefix after compiling
+do_compile:append() {
+    find ${B} -name 'qrc_*.cpp' -exec sed -i -e 's|${TMPDIR}|<TMPDIR>|g' {} +
+}
