@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=KitchenSink
+Comment=CopperSpice feature demo
+Exec=/usr/lib/kitchensink/KitchenSink
+Icon=utilities-terminal
+Categories=Development;
