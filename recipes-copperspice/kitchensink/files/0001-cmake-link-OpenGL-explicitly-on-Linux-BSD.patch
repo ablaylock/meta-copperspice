@@ -1,0 +1,45 @@
+From 17f888453543f63b64ec87b46cd960720c8dfb20 Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Thu, 9 Jul 2026 13:23:55 -0600
+Subject: [PATCH] cmake: link OpenGL explicitly on Linux/BSD
+
+glwidget.cpp and grabber.cpp call desktop GL entry points directly
+(glLightfv, glTexCoord2f, glBegin, ...). The link only succeeded when
+CopperSpice's exported CMake package leaked its private OpenGL
+dependency to consumers; a CopperSpice application must not rely on
+transitive GL usage requirements from CsGui/CsOpenGL. Find and link
+OpenGL explicitly, guarded by OPENGL_FOUND so non-GL platforms are
+unaffected. The plain target_link_libraries signature is used because
+the KitchenSink target already uses the plain signature and CMake
+forbids mixing it with the keyword signature. Plain find_package
+(no COMPONENTS) is used deliberately.
+
+Upstream-Status: Pending [https://github.com/copperspice/kitchensink]
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
+---
+ src/CMakeLists.txt | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index d3c3bfe..722250b 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -170,6 +170,15 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+ elseif(CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+    set_target_properties(KitchenSink PROPERTIES OUTPUT_NAME kitchensink)
+ 
++   # glwidget.cpp and grabber.cpp call GL entry points directly
++   # (glLightfv, glTexCoord2f, ...), link OpenGL explicitly instead of
++   # relying on it propagating from CsGui/CsOpenGL
++   find_package(OpenGL)
++
++   if (OPENGL_FOUND)
++      target_link_libraries(KitchenSink ${OPENGL_LIBRARIES})
++   endif()
++
+ elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+    target_link_libraries(KitchenSink
+       netapi32
+-- 
+2.43.0
+

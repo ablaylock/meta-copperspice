@@ -8,6 +8,7 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=ff94566f728b63bc7cfa537805eacf36"
 
 SRC_URI = " \
     git://github.com/copperspice/kitchensink.git;protocol=https;branch=master \
+    file://0001-cmake-link-OpenGL-explicitly-on-Linux-BSD.patch \
     file://kitchensink.desktop \
 "
 # tag ks-2.1.0
@@ -22,12 +23,16 @@ REQUIRED_DISTRO_FEATURES = "x11"
 # install the binary+resources sibling layout the app expects.
 do_install() {
     install -d ${D}${libdir}/kitchensink/resources
-    install -m 0755 ${B}/src/KitchenSink ${D}${libdir}/kitchensink/
+    # CMAKE_RUNTIME_OUTPUT_DIRECTORY=bin plus OUTPUT_NAME=kitchensink on
+    # Linux place the binary at ${B}/bin/kitchensink; install it under the
+    # upstream target name KitchenSink used by the symlink and desktop entry
+    install -m 0755 ${B}/bin/kitchensink ${D}${libdir}/kitchensink/KitchenSink
     install -m 0644 ${S}/resources/sampleMenu.xml ${D}${libdir}/kitchensink/resources/
     install -m 0644 ${S}/resources/ks.png ${D}${libdir}/kitchensink/resources/
 
-    # translations produced by lrelease during the build
-    for qm in $(find ${B} -name "*.qm"); do
+    # translations produced by lrelease during the build; upstream sets
+    # TS_OUTPUT_DIR to ${S}/resources, overriding the build folder
+    for qm in $(find ${B} ${S}/resources -name "*.qm"); do
         install -m 0644 $qm ${D}${libdir}/kitchensink/resources/
     done
 
