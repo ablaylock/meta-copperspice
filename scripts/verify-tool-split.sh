@@ -34,7 +34,11 @@ for t in uic rcc lrelease lconvert lupdate; do
 done
 
 # 3. the packaged target tools are target binaries
-pkgdir=$(find tmp/work -path "*/copperspice/*/packages-split/copperspice-tools/usr/bin" -type d 2>/dev/null | head -n1)
+# Scope the search to this machine's package arch: the build dir may hold
+# work directories for several machines, and an unscoped find could pick
+# up another machine's packages-split.
+pkg_arch=$(awk '$1 == "cs-hello" { print $2 }' "${MANIFEST}" | tr '_' '-')
+pkgdir=$(find tmp/work -path "*/${pkg_arch}-*/copperspice/*/packages-split/copperspice-tools/usr/bin" -type d 2>/dev/null | head -n1)
 if [ -n "$pkgdir" ] && file "$pkgdir/uic" | grep -qv "x86-64"; then
    echo "PASS: packaged copperspice-tools/uic is a target binary"
 elif [ "${MACHINE}" = "qemux86-64" ]; then
