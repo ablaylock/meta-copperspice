@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=CS Hello
+Comment=Minimal CopperSpice demo
+Exec=cs-hello
+Icon=utilities-terminal
+Categories=Utility;
