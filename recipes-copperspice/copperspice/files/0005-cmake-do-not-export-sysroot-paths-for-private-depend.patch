@@ -1,6 +1,6 @@
-From f92517140a5a85150e482f0a6863e33e89873c4c Mon Sep 17 00:00:00 2001
+From 892cecb79fda3c68c1fb082a0c2a4bdcb7e0bf33 Mon Sep 17 00:00:00 2001
 From: Allen Blaylock <alblay.lhs@gmail.com>
-Date: Thu, 9 Jul 2026 08:56:37 -0600
+Date: Thu, 9 Jul 2026 10:19:53 -0600
 Subject: [PATCH] cmake: do not export sysroot paths for private dependencies
 
 The CopperSpice shared libraries declare several external dependencies
@@ -22,23 +22,31 @@ Change these to PRIVATE. The shared libraries still record the
 dependencies in DT_NEEDED, so runtime linking is unchanged; only the
 leaked absolute paths disappear from the exported CMake package.
 
-Libraries that call zlib directly (CsGui via qzip.cpp and qpdf.cpp,
-CsNetwork via qhttp_networkreply.cpp and qspdyprotocolhandler.cpp,
-CsSvg via qsvgtinydocument.cpp) previously relied on CsCore's PUBLIC
-zlib propagation; give each its own PRIVATE link. Likewise the
-CsGuiXcb_Glx platform plugin calls glX* directly and relied on CsGui's
-PUBLIC OpenGL propagation; link it against ${OPENGL_LIBRARIES} itself.
+Targets that consume these dependencies directly previously freeloaded
+on the PUBLIC propagation and now need their own PRIVATE usage:
+
+- zlib callers: CsGui (qzip.cpp, qpdf.cpp), CsNetwork
+  (qhttp_networkreply.cpp, qspdyprotocolhandler.cpp), CsSvg
+  (qsvgtinydocument.cpp) each get a PRIVATE ${ZLIB_LIBRARIES} link.
+- GL callers: the CsGuiXcb_Glx platform plugin (glX*) and CsMultimedia
+  (fixed-pipeline GL in widgets/qpaintervideosurface.cpp) each get a
+  PRIVATE ${OPENGL_LIBRARIES} link.
+- The GStreamer mediaservice plugins (CsMultimedia_gst_audiodecoder,
+  _gst_camerabin, _gst_mediaplayer) request ${GSTREAMER_INCLUDE_DIR},
+  a variable FindGStreamer.cmake never defines; they only compiled via
+  CsMultimedia's PUBLIC include dirs. Use ${GSTREAMER_INCLUDE_DIRS}.
 
 Upstream-Status: Pending [https://github.com/copperspice/copperspice]
 ---
- src/core/CMakeLists.txt                     |  2 +-
- src/gui/CMakeLists.txt                      | 10 +++++++++-
- src/multimedia/CMakeLists.txt               |  2 +-
- src/network/CMakeLists.txt                  |  7 +++++++
- src/opengl/CMakeLists.txt                   |  1 +
- src/plugins/platforms/xcb/glx/xcb_glx.cmake |  1 +
- src/svg/CMakeLists.txt                      |  7 +++++++
- 7 files changed, 27 insertions(+), 3 deletions(-)
+ src/core/CMakeLists.txt                                |  2 +-
+ src/gui/CMakeLists.txt                                 | 10 +++++++++-
+ src/multimedia/CMakeLists.txt                          |  4 +++-
+ src/network/CMakeLists.txt                             |  7 +++++++
+ src/opengl/CMakeLists.txt                              |  1 +
+ .../multimedia/mediaservices/gstreamer/gstreamer.cmake |  6 +++---
+ src/plugins/platforms/xcb/glx/xcb_glx.cmake            |  1 +
+ src/svg/CMakeLists.txt                                 |  7 +++++++
+ 8 files changed, 32 insertions(+), 6 deletions(-)
 
 diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
 index 2e14caa..c4098c0 100644
@@ -88,10 +96,15 @@ index 2860dad..0b408f2 100644
     PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:SHELL:${EXTRA_GUI_CXXFLAGS}>
 diff --git a/src/multimedia/CMakeLists.txt b/src/multimedia/CMakeLists.txt
-index 0ea80a4..7bf09d6 100644
+index 0ea80a4..7e58528 100644
 --- a/src/multimedia/CMakeLists.txt
 +++ b/src/multimedia/CMakeLists.txt
-@@ -74,7 +74,7 @@ target_link_libraries(CsMultimedia
+@@ -71,10 +71,12 @@ target_link_libraries(CsMultimedia
+    CsGui
+    CsNetwork
+    CsOpenGL
++   PRIVATE
++   ${OPENGL_LIBRARIES}
  )
  
  target_include_directories(CsMultimedia
@@ -129,6 +142,37 @@ index 94bde19..bb8355e 100644
 +   PRIVATE
     ${OPENGL_LIBRARIES}
  )
+ 
+diff --git a/src/plugins/multimedia/mediaservices/gstreamer/gstreamer.cmake b/src/plugins/multimedia/mediaservices/gstreamer/gstreamer.cmake
+index 55d82f0..4159771 100644
+--- a/src/plugins/multimedia/mediaservices/gstreamer/gstreamer.cmake
++++ b/src/plugins/multimedia/mediaservices/gstreamer/gstreamer.cmake
+@@ -106,7 +106,7 @@ if(WITH_MULTIMEDIA AND GStreamer_FOUND)
+    target_include_directories(
+       CsMultimedia_gst_audiodecoder
+       PRIVATE
+-      ${GSTREAMER_INCLUDE_DIR}
++      ${GSTREAMER_INCLUDE_DIRS}
+       ${GLIB2_INCLUDES}
+    )
+ 
+@@ -167,7 +167,7 @@ if(WITH_MULTIMEDIA AND GStreamer_FOUND)
+    target_include_directories(
+       CsMultimedia_gst_camerabin
+       PRIVATE
+-      ${GSTREAMER_INCLUDE_DIR}
++      ${GSTREAMER_INCLUDE_DIRS}
+       ${GLIB2_INCLUDES}
+    )
+ 
+@@ -217,7 +217,7 @@ if(WITH_MULTIMEDIA AND GStreamer_FOUND)
+    target_include_directories(
+       CsMultimedia_gst_mediaplayer
+       PRIVATE
+-      ${GSTREAMER_INCLUDE_DIR}
++      ${GSTREAMER_INCLUDE_DIRS}
+       ${GLIB2_INCLUDES}
+    )
  
 diff --git a/src/plugins/platforms/xcb/glx/xcb_glx.cmake b/src/plugins/platforms/xcb/glx/xcb_glx.cmake
 index 46631e5..a029c4b 100644
