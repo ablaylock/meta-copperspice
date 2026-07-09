@@ -21,6 +21,7 @@ SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}
            file://0002-cmake-support-prebuilt-host-tools-in-the-exported-co.patch \
            file://0003-cmake-only-request-the-OpenGL-EGL-component-when-Way.patch \
            file://0004-cmake-build-the-NEON-drawhelpers-on-64-bit-ARM.patch \
+           file://0005-cmake-do-not-export-sysroot-paths-for-private-depend.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
@@ -108,6 +109,15 @@ EXTRA_OECMAKE:class-native = "${CS_FEATURES_OFF}"
 EXTRA_OECMAKE:class-nativesdk = "${CS_FEATURES_OFF}"
 
 BBCLASSEXTEND = "native nativesdk"
+
+# rcc records the absolute path of every input file as a comment in the
+# generated qrc_*.cpp, which then lands in the copperspice-src debug
+# sources and trips the buildpaths QA check. The paths only occur in
+# generated comments (verified: no occurrences in code or resource
+# data), so neutralizing them changes nothing but the comment text.
+do_compile:append() {
+    find ${B} -name "qrc_*.cpp" -exec sed -i -e "s|${TMPDIR}|/buildpaths-scrubbed|g" {} +
+}
 
 # CopperSpice deliberately ships unversioned libraries: the ABI is encoded
 # in the file name (libCsCore2.1.so) instead of an SONAME suffix. The .so

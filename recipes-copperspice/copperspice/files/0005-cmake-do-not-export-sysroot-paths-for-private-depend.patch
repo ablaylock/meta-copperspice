@@ -1,0 +1,93 @@
+From 5749f2ff8de53a3f8f7ac8fbe0776fdebb01186f Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Thu, 9 Jul 2026 07:36:23 -0600
+Subject: [PATCH] cmake: do not export sysroot paths for private dependencies
+
+The CopperSpice shared libraries declare several external dependencies
+as PUBLIC, which bakes the absolute build-time paths of those
+dependencies (the cross-compile sysroot) into the exported
+CopperSpiceLibraryTargets.cmake usage requirements:
+
+- CsCore links ${ZLIB_LIBRARIES} PUBLIC, but zlib is an implementation
+  detail: no public CsCore header includes zlib.h.
+- CsGui and CsOpenGL export ${OPENGL_INCLUDE_DIR} and
+  ${OPENGL_LIBRARIES}. GL headers reached through public headers
+  (qopengl.h) use standard <GL/...> includes found on the compiler's
+  default search path, and applications calling GL entry points
+  directly should locate OpenGL themselves.
+- CsMultimedia exports ${GSTREAMER_INCLUDE_DIRS}, but no public
+  QtMultimedia header includes GStreamer headers.
+
+Change these to PRIVATE. The shared libraries still record the
+dependencies in DT_NEEDED, so runtime linking is unchanged; only the
+leaked absolute paths disappear from the exported CMake package.
+
+Upstream-Status: Pending [https://github.com/copperspice/copperspice]
+---
+ src/core/CMakeLists.txt       | 2 +-
+ src/gui/CMakeLists.txt        | 3 ++-
+ src/multimedia/CMakeLists.txt | 2 +-
+ src/opengl/CMakeLists.txt     | 1 +
+ 4 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
+index 2e14caa..c4098c0 100644
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -194,7 +194,7 @@ endif()
+ 
+ if (ZLIB_FOUND)
+    target_link_libraries(CsCore
+-      PUBLIC
++      PRIVATE
+       ${ZLIB_LIBRARIES}
+    )
+ 
+diff --git a/src/gui/CMakeLists.txt b/src/gui/CMakeLists.txt
+index 2860dad..f4d5e14 100644
+--- a/src/gui/CMakeLists.txt
++++ b/src/gui/CMakeLists.txt
+@@ -180,13 +180,14 @@ target_sources(CsGui
+ )
+ 
+ target_include_directories(CsGui
+-   PUBLIC
++   PRIVATE
+    ${OPENGL_INCLUDE_DIR}
+ )
+ 
+ target_link_libraries(CsGui
+    PUBLIC
+    CsCore
++   PRIVATE
+    ${OPENGL_LIBRARIES}
+ )
+ 
+diff --git a/src/multimedia/CMakeLists.txt b/src/multimedia/CMakeLists.txt
+index 0ea80a4..7bf09d6 100644
+--- a/src/multimedia/CMakeLists.txt
++++ b/src/multimedia/CMakeLists.txt
+@@ -74,7 +74,7 @@ target_link_libraries(CsMultimedia
+ )
+ 
+ target_include_directories(CsMultimedia
+-   PUBLIC
++   PRIVATE
+    ${GSTREAMER_INCLUDE_DIRS}
+ )
+ 
+diff --git a/src/opengl/CMakeLists.txt b/src/opengl/CMakeLists.txt
+index 94bde19..bb8355e 100644
+--- a/src/opengl/CMakeLists.txt
++++ b/src/opengl/CMakeLists.txt
+@@ -130,6 +130,7 @@ target_link_libraries(CsOpenGL
+    PUBLIC
+    CsCore
+    CsGui
++   PRIVATE
+    ${OPENGL_LIBRARIES}
+ )
+ 
+-- 
+2.43.0
+
