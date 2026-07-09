@@ -135,9 +135,38 @@ FILES:${PN}-tools = "${bindir}"
 # CopperSpice plugins (CsGuiXcb2.1.so, CsImageFormatsSvg2.1.so, etc.) are
 # installed flat in ${libdir} using bare names with no "lib" prefix - a
 # deliberate upstream convention distinguishing plugins from the main
-# libraries (libCs*2.1.so). The default FILES:${PN} pattern only matches
-# "lib*${SOLIBS}", so these bare-named runtime plugins need an explicit
-# glob or they are installed-but-unshipped (and dropping them breaks
-# GUI/multimedia/printing/SVG support entirely, e.g. CsGuiXcb2.1.so is
-# the X11 platform plugin without which no GUI app can start).
-FILES:${PN} += "${libdir}/Cs*.so"
+# libraries (libCs*2.1.so). At runtime, however, QFactoryLoader only
+# searches <librarypath>/<category>/ (e.g. .../platforms/CsGuiXcb2.1.so);
+# a flat ${libdir} is never searched, so no GUI app can start ("platform
+# plugin was not found", key "xcb"). Upstream expects each application to
+# bundle plugins beside its executable; for a system-wide install we
+# instead arrange the categorized layout under ${libdir}/copperspice and
+# publish it through CS_PLUGIN_PATH (honored by
+# QCoreApplication::libraryPaths), set for login shells and the X session
+# alike via /etc/profile.d (Xsession sources /etc/profile).
+do_install:append:class-target() {
+    for plugin in ${D}${libdir}/Cs*.so; do
+        [ -e "$plugin" ] || continue
+        case "$(basename $plugin)" in
+            CsGuiXcb_Glx*)       category=xcbglintegrations ;;
+            CsGuiXcb*)           category=platforms ;;
+            CsImageFormats*)     category=imageformats ;;
+            CsMultimedia_m3u*)   category=playlistformats ;;
+            CsMultimedia_gst_*)  category=mediaservices ;;
+            CsPrinterDriver*)    category=printerdrivers ;;
+            *) bbfatal "unclassified CopperSpice plugin: $plugin" ;;
+        esac
+        install -d ${D}${libdir}/copperspice/plugins/$category
+        mv "$plugin" ${D}${libdir}/copperspice/plugins/$category/
+    done
+
+    install -d ${D}${sysconfdir}/profile.d
+    echo "export CS_PLUGIN_PATH=${libdir}/copperspice/plugins" \
+        > ${D}${sysconfdir}/profile.d/copperspice.sh
+}
+
+FILES:${PN} += "${libdir}/copperspice/plugins ${sysconfdir}/profile.d/copperspice.sh"
+
+# nativesdk keeps the flat upstream layout (its plugins ship as-installed;
+# the SDK host tools do not load GUI plugins)
+FILES:${PN}:append:class-nativesdk = " ${libdir}/Cs*.so"
