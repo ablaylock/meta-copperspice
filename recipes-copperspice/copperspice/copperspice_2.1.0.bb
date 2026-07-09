@@ -108,3 +108,26 @@ EXTRA_OECMAKE:class-native = "${CS_FEATURES_OFF}"
 EXTRA_OECMAKE:class-nativesdk = "${CS_FEATURES_OFF}"
 
 BBCLASSEXTEND = "native nativesdk"
+
+# CopperSpice deliberately ships unversioned libraries: the ABI is encoded
+# in the file name (libCsCore2.1.so) instead of an SONAME suffix. The .so
+# files are therefore runtime libraries, not dev symlinks.
+SOLIBS = ".so"
+FILES_SOLIBSDEV = ""
+
+PACKAGES =+ "${PN}-tools"
+
+# Target-arch uic/rcc/lrelease/lconvert/lupdate/linguist: only useful for
+# doing development ON the device. Host builds use copperspice-native;
+# images must not pull this in.
+FILES:${PN}-tools = "${bindir}"
+
+# CopperSpice plugins (CsGuiXcb2.1.so, CsImageFormatsSvg2.1.so, etc.) are
+# installed flat in ${libdir} using bare names with no "lib" prefix - a
+# deliberate upstream convention distinguishing plugins from the main
+# libraries (libCs*2.1.so). The default FILES:${PN} pattern only matches
+# "lib*${SOLIBS}", so these bare-named runtime plugins need an explicit
+# glob or they are installed-but-unshipped (and dropping them breaks
+# GUI/multimedia/printing/SVG support entirely, e.g. CsGuiXcb2.1.so is
+# the X11 platform plugin without which no GUI app can start).
+FILES:${PN} += "${libdir}/Cs*.so"
