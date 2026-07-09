@@ -37,8 +37,14 @@ done
 # Scope the search to this machine's package arch: the build dir may hold
 # work directories for several machines, and an unscoped find could pick
 # up another machine's packages-split.
-pkg_arch=$(awk '$1 == "cs-hello" { print $2 }' "${MANIFEST}" | tr '_' '-')
-pkgdir=$(find tmp/work -path "*/${pkg_arch}-*/copperspice/*/packages-split/copperspice-tools/usr/bin" -type d 2>/dev/null | head -n1)
+# The manifest arch is the package-manager spelling (RPM turns '-' into '_',
+# e.g. PACKAGE_ARCH x86-64-v3 -> manifest x86_64_v3) while tmp/work uses the
+# raw PACKAGE_ARCH, so match both characters with a '?' glob instead of
+# assuming one translation direction.
+pkg_arch_glob=$(awk '$1 == "cs-hello" { print $2 }' "${MANIFEST}" | tr '_-' '??')
+pkgdir=$(find tmp/work -path "*/${pkg_arch_glob}-*/copperspice/*/packages-split/copperspice-tools/usr/bin" -type d 2>/dev/null | head -n1)
+# Note: on qemux86-64 the elif below prints INFO whether or not pkgdir was
+# found, so this lookup is only truly exercised on non-x86-64 machines.
 if [ -n "$pkgdir" ] && file "$pkgdir/uic" | grep -qv "x86-64"; then
    echo "PASS: packaged copperspice-tools/uic is a target binary"
 elif [ "${MACHINE}" = "qemux86-64" ]; then
