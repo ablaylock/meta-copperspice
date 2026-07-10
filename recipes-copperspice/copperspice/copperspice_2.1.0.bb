@@ -67,7 +67,7 @@ CXXFLAGS:remove = "-fvisibility-inlines-hidden"
 
 # CopperSpice compile units need roughly 4 GB of RAM per thread; cap the
 # make-level parallelism for this recipe (applies to all class variants)
-PARALLEL_MAKE = "-j 6"
+PARALLEL_MAKE = "-j 10"
 
 # With full -g, libCsGui2.1.so exceeds 4 GiB and a 32-bit ELF cannot
 # represent file offsets past that, so the linker emits a structurally
