@@ -67,7 +67,9 @@ kas shell meta-copperspice/kas/qemuarm64.yml -c \
 Add the layer path to `BBLAYERS` in an existing wrynose build
 (openembedded-core + bitbake 2.18 + meta-poky) and add
 `copperspice-demo-image` or the individual recipes to your image. The
-recipes have no dependency on kas.
+recipes have no dependency on kas. The distro must provide the `x11` and
+`opengl` `DISTRO_FEATURES` (poky's defaults do); without them the
+`copperspice` recipe and the demo apps are skipped.
 
 ## The host/target tool split
 
@@ -78,10 +80,11 @@ twice:
 
 - `copperspice-native` builds a tools-only configuration (CsCore + CsXml,
   everything else off) and stages the five tools for the build host.
-- The target `copperspice` build — and every consumer recipe — points the
-  tool invocations at the native ones via `CS_TOOL_UIC`, `CS_TOOL_RCC`,
-  `CS_TOOL_LRELEASE`, `CS_TOOL_LCONVERT`, `CS_TOOL_LUPDATE` CMake cache
-  variables. These variables are added by carried patches 0001 (CopperSpice's
+- The target `copperspice` build points its own tool invocations at the
+  native `uic`/`rcc`/`lrelease` (the only tools CopperSpice runs while
+  building itself), and consumer recipes point all five, via the
+  `CS_TOOL_UIC`, `CS_TOOL_RCC`, `CS_TOOL_LRELEASE`, `CS_TOOL_LCONVERT`,
+  `CS_TOOL_LUPDATE` CMake cache variables. These variables are added by carried patches 0001 (CopperSpice's
   own build) and 0002 (the exported `CopperSpiceConfig.cmake`, so any
   `find_package(CopperSpice)` project gets them); they are no-ops when
   unset, leaving native builds and upstream behavior unchanged.
@@ -129,8 +132,10 @@ Six patches in `recipes-copperspice/copperspice/files/`, all
   builds run host tools.
 - `0002-cmake-support-prebuilt-host-tools-in-the-exported-co.patch` —
   honor the same `CS_TOOL_*` variables in the exported
-  `CopperSpiceConfig.cmake`, repointing the `CopperSpice::uic` etc.
-  IMPORTED targets for consumer projects.
+  `CopperSpiceConfig.cmake`: when they are set, the generated
+  `CopperSpiceBinaryTargets.cmake` (whose existence checks fail in a cross
+  sysroot) is skipped and `CopperSpice::uic` etc. IMPORTED targets are
+  created directly from the given host tools.
 - `0003-cmake-only-request-the-OpenGL-EGL-component-when-Way.patch` —
   the unconditional EGL component request breaks FindOpenGL on legacy
   (non-GLVND) Mesa, leaving CsGui unlinkable; EGL is only needed by the
