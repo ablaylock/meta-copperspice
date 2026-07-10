@@ -46,7 +46,7 @@ DEPENDS:class-nativesdk = "nativesdk-glib-2.0"
 # The default knob set reproduces the feature set this layer has always
 # built: GUI toolkit on X11 with multimedia, OpenGL, SVG, SQL(sqlite),
 # XmlPatterns, TLS, CUPS printing, and glib event-loop integration.
-PACKAGECONFIG:class-target ??= " \
+PACKAGECONFIG ??= " \
     gui network \
     ${@bb.utils.filter('DISTRO_FEATURES', 'x11', d)} \
     multimedia opengl svg sql xmlpatterns openssl cups glib \
