@@ -1,0 +1,20 @@
+# Extra inputs for the per-knob PACKAGECONFIG audit (scripts/knob-audit.sh):
+# meta-oe supplies the SQL client libraries (postgresql, mariadb,
+# unixodbc) behind the psql/mysql/odbc knobs; the vulkan distro feature
+# is required by oe-core's vulkan-loader behind the vulkan knob.
+# Use together with a machine config:
+#   kas shell meta-copperspice/kas/qemuarm64.yml:meta-copperspice/kas/audit.yml
+header:
+  version: 14
+
+repos:
+  meta-openembedded:
+    url: "https://git.openembedded.org/meta-openembedded"
+    branch: wrynose
+    commit: 100027977216601000cbefc42c2ff6cf667e7b5e
+    layers:
+      meta-oe:
+
+local_conf_header:
+  knob-audit-features: |
+    DISTRO_FEATURES:append = " vulkan"
