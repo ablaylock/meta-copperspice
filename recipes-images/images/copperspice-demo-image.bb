@@ -7,5 +7,8 @@ IMAGE_INSTALL += "cs-hello kitchensink"
 
 IMAGE_FEATURES += "ssh-server-dropbear"
 
-# SDKs generated from this image ship the CopperSpice host tools
-TOOLCHAIN_HOST_TASK:append = " nativesdk-copperspice"
+# SDKs generated from this image ship the CopperSpice host libraries AND
+# the host tools: the ${PN}-tools split (which keeps uic/rcc out of target
+# images) applies to the nativesdk variant too, so the tools must be
+# pulled in explicitly or the SDK gets libraries with no code generators.
+TOOLCHAIN_HOST_TASK:append = " nativesdk-copperspice nativesdk-copperspice-tools"
