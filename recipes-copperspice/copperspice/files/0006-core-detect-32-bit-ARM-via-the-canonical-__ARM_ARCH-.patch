@@ -1,0 +1,43 @@
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Thu, 9 Jul 2026 18:40:00 -0600
+Subject: [PATCH] core: detect 32 bit ARM via the canonical __ARM_ARCH macro
+
+qglobal.h only recognizes the exact macros __ARM_ARCH_7__, __ARM_ARCH_6__
+and __ARM_ARCH_5__, but GCC defines a profile-specific spelling instead:
+building for cortex-a15 defines __ARM_ARCH_7A__ (verified against the
+Yocto cortexa15t2hf toolchain; armv7ve builds define __ARM_ARCH_7VE__),
+none of which match, so any 32-bit ARM profile beyond base v7 dies with
+"#error Unsupported system architecture, CopperSpice requires V5 or
+newer". Check __ARM_ARCH first - the canonical numeric architecture
+macro defined by GCC 4.8+ and Clang for every ARM target - and keep the
+old exact-match tests as a fallback for ancient compilers. The stray
+Q_PROCESSOR_ARM_V8 in the v6 branch (upstream typo for V6) is left
+untouched; none of the Q_PROCESSOR_ARM_V* macros have any users.
+
+Upstream-Status: Pending
+---
+ src/core/global/qglobal.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/global/qglobal.h b/src/core/global/qglobal.h
+--- a/src/core/global/qglobal.h
++++ b/src/core/global/qglobal.h
+@@ -101,15 +101,15 @@
+ 
+ #   define Q_PROCESSOR_ARM_32
+ 
+-#   if defined(__ARM_ARCH_7__)
++#   if (defined(__ARM_ARCH) && __ARM_ARCH >= 7) || defined(__ARM_ARCH_7__)
+ #      define Q_PROCESSOR_ARM      7
+ #      define Q_PROCESSOR_ARM_V7
+ 
+-#   elif defined(__ARM_ARCH_6__)
++#   elif (defined(__ARM_ARCH) && __ARM_ARCH == 6) || defined(__ARM_ARCH_6__)
+ #      define Q_PROCESSOR_ARM      6
+ #      define Q_PROCESSOR_ARM_V8
+ 
+-#   elif defined(__ARM_ARCH_5__)
++#   elif (defined(__ARM_ARCH) && __ARM_ARCH == 5) || defined(__ARM_ARCH_5__)
+ #      define Q_PROCESSOR_ARM      5
+ #      define Q_PROCESSOR_ARM_V5
+ 

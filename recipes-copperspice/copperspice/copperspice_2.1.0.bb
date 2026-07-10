@@ -22,6 +22,7 @@ SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}
            file://0003-cmake-only-request-the-OpenGL-EGL-component-when-Way.patch \
            file://0004-cmake-build-the-NEON-drawhelpers-on-64-bit-ARM.patch \
            file://0005-cmake-do-not-export-sysroot-paths-for-private-depend.patch \
+           file://0006-core-detect-32-bit-ARM-via-the-canonical-__ARM_ARCH-.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
