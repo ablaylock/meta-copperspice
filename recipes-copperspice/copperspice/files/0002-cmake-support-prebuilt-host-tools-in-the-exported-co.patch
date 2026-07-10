@@ -45,7 +45,7 @@ index 308f036..66c998f 100644
 +   foreach(_cs_tool uic rcc lrelease lconvert lupdate cs_wayland_scanner linguist)
 +      string(TOUPPER ${_cs_tool} _cs_tool_uc)
 +
-+      if(CS_TOOL_${_cs_tool_uc})
++      if(CS_TOOL_${_cs_tool_uc} AND NOT TARGET CopperSpice::${_cs_tool})
 +         add_executable(CopperSpice::${_cs_tool} IMPORTED)
 +         set_target_properties(CopperSpice::${_cs_tool} PROPERTIES
 +            IMPORTED_LOCATION "${CS_TOOL_${_cs_tool_uc}}")
