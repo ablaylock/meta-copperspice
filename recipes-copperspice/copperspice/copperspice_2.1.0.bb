@@ -28,38 +28,74 @@ SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee235
 
 inherit cmake pkgconfig features_check
 
-REQUIRED_DISTRO_FEATURES:class-target = "x11 opengl"
-
-DEPENDS:class-target = " \
-    copperspice-native \
-    alsa-lib \
-    cups \
-    fontconfig \
-    freetype \
-    glib-2.0 \
-    gstreamer1.0 \
-    gstreamer1.0-plugins-base \
-    jpeg \
-    libx11 \
-    libxcb \
-    libxcursor \
-    libxi \
-    libxinerama \
-    libxkbcommon \
-    libxml2 \
-    openssl \
-    sqlite3 \
-    virtual/libgl \
-    virtual/libiconv \
-    xcb-util \
-    xcb-util-image \
-    xcb-util-keysyms \
-    xcb-util-renderutil \
-    xcb-util-wm \
-    zlib \
+# Computed from the selected PACKAGECONFIG. Any GUI build needs libGL:
+# CsGui compiles its QOpenGL* classes unconditionally
+# (src/gui/CMakeLists.txt includes opengl/opengl.cmake with no condition)
+# and upstream configure hard-requires OpenGL when WITH_GUI is on. The
+# 'opengl' knob below only controls the separate CsOpenGL add-on library.
+REQUIRED_DISTRO_FEATURES:class-target = " \
+    ${@bb.utils.contains('PACKAGECONFIG', 'gui', 'opengl', '', d)} \
+    ${@bb.utils.contains('PACKAGECONFIG', 'x11', 'x11', '', d)} \
+    ${@bb.utils.contains('PACKAGECONFIG', 'vulkan', 'vulkan', '', d)} \
 "
+
+DEPENDS:class-target = "copperspice-native virtual/libiconv zlib"
 DEPENDS:class-native = "glib-2.0-native"
 DEPENDS:class-nativesdk = "nativesdk-glib-2.0"
+
+# The default knob set reproduces the feature set this layer has always
+# built: GUI toolkit on X11 with multimedia, OpenGL, SVG, SQL(sqlite),
+# XmlPatterns, TLS, CUPS printing, and glib event-loop integration.
+PACKAGECONFIG:class-target ??= " \
+    gui network \
+    ${@bb.utils.filter('DISTRO_FEATURES', 'x11', d)} \
+    multimedia opengl svg sql xmlpatterns openssl cups glib \
+"
+PACKAGECONFIG:class-native = ""
+PACKAGECONFIG:class-nativesdk = ""
+
+# Component switches (upstream WITH_* options). Interdependencies are
+# validated at parse time below, mirroring upstream's configure rules.
+PACKAGECONFIG[gui]         = "-DWITH_GUI=YES,-DWITH_GUI=NO -DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE,fontconfig freetype jpeg virtual/libgl"
+PACKAGECONFIG[network]     = "-DWITH_NETWORK=YES,-DWITH_NETWORK=NO"
+PACKAGECONFIG[opengl]      = "-DWITH_OPENGL=YES,-DWITH_OPENGL=NO"
+PACKAGECONFIG[multimedia]  = "-DWITH_MULTIMEDIA=YES,-DWITH_MULTIMEDIA=NO,gstreamer1.0 gstreamer1.0-plugins-base"
+PACKAGECONFIG[svg]         = "-DWITH_SVG=YES,-DWITH_SVG=NO"
+PACKAGECONFIG[sql]         = "-DWITH_SQL=YES,-DWITH_SQL=NO -DCMAKE_DISABLE_FIND_PACKAGE_SQLite3=TRUE,sqlite3"
+PACKAGECONFIG[xmlpatterns] = "-DWITH_XMLPATTERNS=YES,-DWITH_XMLPATTERNS=NO"
+# vulkan-loader requires the 'vulkan' distro feature (enforced above)
+PACKAGECONFIG[vulkan]      = "-DWITH_VULKAN=YES,-DWITH_VULKAN=NO,vulkan-loader vulkan-headers"
+PACKAGECONFIG[webkit]      = "-DWITH_WEBKIT=YES,-DWITH_WEBKIT=NO,libxml2"
+
+# SQL driver plugins. The client libraries live in meta-openembedded's
+# meta-oe layer, which this layer does not otherwise require; enabling
+# one of these knobs requires meta-oe in bblayers (see README).
+PACKAGECONFIG[psql]        = "-DWITH_PSQL_PLUGIN=YES,-DWITH_PSQL_PLUGIN=NO -DCMAKE_DISABLE_FIND_PACKAGE_PostgreSQL=TRUE,postgresql"
+PACKAGECONFIG[mysql]       = "-DWITH_MYSQL_PLUGIN=YES,-DWITH_MYSQL_PLUGIN=NO -DCMAKE_DISABLE_FIND_PACKAGE_MySQL=TRUE,mariadb"
+PACKAGECONFIG[odbc]        = "-DWITH_ODBC_PLUGIN=YES,-DWITH_ODBC_PLUGIN=NO -DCMAKE_DISABLE_FIND_PACKAGE_ODBC=TRUE,unixodbc"
+
+# Detection-only features: upstream has no WITH_* switch, so the OFF side
+# must forbid find_package() or the feature state would depend on what
+# happens to be staged in the sysroot (e.g. wayland leaking in via mesa).
+# CsNetwork dlopens libssl/libcrypto at runtime instead of linking them,
+# hence the RDEPENDS entries on the openssl knob.
+PACKAGECONFIG[openssl]     = ",-DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE,openssl,libssl libcrypto"
+PACKAGECONFIG[cups]        = ",-DCMAKE_DISABLE_FIND_PACKAGE_Cups=TRUE,cups"
+PACKAGECONFIG[pulseaudio]  = ",-DCMAKE_DISABLE_FIND_PACKAGE_PulseAudio=TRUE,pulseaudio"
+PACKAGECONFIG[glib]        = ",-DCMAKE_DISABLE_FIND_PACKAGE_GLib2=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_GObject2=TRUE,glib-2.0"
+# XKBCommon (unlike XKBCommon_X11) serves both X11 and Wayland, so
+# libxkbcommon rides each platform knob rather than the disable list.
+PACKAGECONFIG[x11]         = ",-DCMAKE_DISABLE_FIND_PACKAGE_XCB=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_XKBCommon_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11_XCB=TRUE,libx11 libxcb libxcursor libxi libxinerama libxkbcommon xcb-util xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm"
+# Wayland support lands in Phase 2 (needs cs_wayland_scanner from
+# copperspice-native); selecting it is rejected at parse time below. The
+# knob exists now so its OFF side keeps wayland detection deterministic.
+PACKAGECONFIG[wayland]     = ",-DCMAKE_DISABLE_FIND_PACKAGE_Wayland=TRUE"
+
+# ALSA is dead code in CS 2.1.0: find_package(ALSA) runs but the result
+# is consumed nowhere in the source tree (the only CS-level audio backend
+# is PulseAudio). Forbid detection so configure output cannot depend on
+# alsa-lib leaking into the sysroot via other recipes.
+EXTRA_OECMAKE:class-target = " -DCMAKE_DISABLE_FIND_PACKAGE_ALSA=TRUE"
 
 # Yocto's default -fvisibility-inlines-hidden breaks CsGui linking
 # (confirmed: https://forum.copperspice.com/viewtopic.php?t=4121)
@@ -75,19 +111,6 @@ PARALLEL_MAKE = "-j 10"
 # Line-tables-only debug info keeps 32-bit ARM comfortably inside the
 # format limit (ELF64 targets are unaffected and keep full -g).
 DEBUG_LEVELFLAG:arm = "-g1"
-
-# Target build enables everything KitchenSink links against. WebKit stays
-# off (KitchenSink's CsWebKit use is disabled upstream); no Vulkan in the
-# QEMU images.
-# The wayland platform plugin would need cs_wayland_scanner at build
-# time (not provided by copperspice-native) and wayland libs can leak
-# into the sysroot transitively via mesa - disable detection so the
-# plugin state is deterministic.
-EXTRA_OECMAKE:class-target = " \
-    -DWITH_WEBKIT=NO \
-    -DWITH_VULKAN=NO \
-    -DCMAKE_DISABLE_FIND_PACKAGE_Wayland=TRUE \
-"
 
 # When cross compiling, CopperSpice's own build runs uic/rcc/lrelease to
 # process its .ui/.qrc/.ts files - use the host tools from
