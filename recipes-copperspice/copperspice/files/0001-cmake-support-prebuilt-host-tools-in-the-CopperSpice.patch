@@ -9,7 +9,8 @@ CS_TOOL_UIC, CS_TOOL_RCC, CS_TOOL_LRELEASE and CS_TOOL_CS_WAYLAND_SCANNER
 to be set to prebuilt host tools. Behavior is unchanged when they are not
 set.
 
-Upstream-Status: Pending [https://github.com/copperspice/copperspice]
+Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
  cmake/modules/ResourceMacros.cmake | 33 ++++++++++++++++++++----------
  1 file changed, 22 insertions(+), 11 deletions(-)

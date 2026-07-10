@@ -8,6 +8,8 @@ inherit cmake pkgconfig
 
 DEPENDS:append:class-target = " copperspice copperspice-native"
 DEPENDS:append:class-nativesdk = " nativesdk-copperspice copperspice-native"
+# class-native consumers are not supported: they would inherit the
+# CS_TOOL_* settings below but no CopperSpice dependency
 
 EXTRA_OECMAKE:append = " \
     -DCS_TOOL_UIC=${STAGING_BINDIR_NATIVE}/uic \
@@ -21,5 +23,5 @@ EXTRA_OECMAKE:append = " \
 # generated qrc_*.cpp; those files ship in ${PN}-src and trip the
 # buildpaths QA check, so scrub the TMPDIR prefix after compiling
 do_compile:append() {
-    find ${B} -name 'qrc_*.cpp' -exec sed -i -e 's|${TMPDIR}|<TMPDIR>|g' {} +
+    find ${B} -name 'qrc_*.cpp' -exec sed -i -e 's|${TMPDIR}|/buildpaths-scrubbed|g' {} +
 }

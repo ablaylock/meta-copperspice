@@ -32,9 +32,12 @@ do_install() {
 
     # translations produced by lrelease during the build; upstream sets
     # TS_OUTPUT_DIR to ${S}/resources, overriding the build folder
+    qm_found=0
     for qm in $(find ${B} ${S}/resources -name "*.qm"); do
         install -m 0644 $qm ${D}${libdir}/kitchensink/resources/
+        qm_found=1
     done
+    [ $qm_found -eq 1 ] || bbfatal "no .qm translations found - did upstream move TS_OUTPUT_DIR?"
 
     install -d ${D}${bindir}
     ln -s ${libdir}/kitchensink/KitchenSink ${D}${bindir}/kitchensink

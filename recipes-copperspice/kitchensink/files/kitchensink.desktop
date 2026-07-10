@@ -2,6 +2,6 @@
 Type=Application
 Name=KitchenSink
 Comment=CopperSpice feature demo
-Exec=/usr/lib/kitchensink/KitchenSink
+Exec=kitchensink
 Icon=utilities-terminal
 Categories=Development;

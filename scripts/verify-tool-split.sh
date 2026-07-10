@@ -2,8 +2,11 @@
 # Verify the CopperSpice host/target tool split for one machine.
 # Run inside 'kas shell' from the build directory:
 #   ../meta-copperspice/scripts/verify-tool-split.sh <machine>
+# Checks 2 and 3 identify the build host by the "x86-64" file(1)
+# signature; on a non-x86-64 build host they need adjusting.
 set -u
 
+[ $# -eq 1 ] || { echo "usage: $0 <machine>" >&2; exit 2; }
 MACHINE="$1"
 DEPLOY="tmp/deploy/images/${MACHINE}"
 fail=0
@@ -45,7 +48,7 @@ pkg_arch_glob=$(awk '$1 == "cs-hello" { print $2 }' "${MANIFEST}" | tr '_-' '??'
 pkgdir=$(find tmp/work -path "*/${pkg_arch_glob}-*/copperspice/*/packages-split/copperspice-tools/usr/bin" -type d 2>/dev/null | head -n1)
 # Note: on qemux86-64 the elif below prints INFO whether or not pkgdir was
 # found, so this lookup is only truly exercised on non-x86-64 machines.
-if [ -n "$pkgdir" ] && file "$pkgdir/uic" | grep -qv "x86-64"; then
+if [ -f "$pkgdir/uic" ] && file "$pkgdir/uic" | grep -qv "x86-64"; then
    echo "PASS: packaged copperspice-tools/uic is a target binary"
 elif [ "${MACHINE}" = "qemux86-64" ]; then
    echo "INFO: target == host arch on qemux86-64, arch check skipped"

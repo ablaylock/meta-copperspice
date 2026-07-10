@@ -69,7 +69,8 @@ Add the layer path to `BBLAYERS` in an existing wrynose build
 `copperspice-demo-image` or the individual recipes to your image. The
 recipes have no dependency on kas. The distro must provide the `x11` and
 `opengl` `DISTRO_FEATURES` (poky's defaults do); without them the
-`copperspice` recipe and the demo apps are skipped.
+`copperspice` recipe is skipped and the demo apps fail to resolve their
+dependency on it.
 
 ## The host/target tool split
 

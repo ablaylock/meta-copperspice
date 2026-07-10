@@ -15,6 +15,7 @@ Q_PROCESSOR_ARM_V8 in the v6 branch (upstream typo for V6) is left
 untouched; none of the Q_PROCESSOR_ARM_V* macros have any users.
 
 Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
  src/core/global/qglobal.h | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)

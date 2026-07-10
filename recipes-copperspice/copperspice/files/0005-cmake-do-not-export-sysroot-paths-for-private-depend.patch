@@ -36,7 +36,8 @@ on the PUBLIC propagation and now need their own PRIVATE usage:
   a variable FindGStreamer.cmake never defines; they only compiled via
   CsMultimedia's PUBLIC include dirs. Use ${GSTREAMER_INCLUDE_DIRS}.
 
-Upstream-Status: Pending [https://github.com/copperspice/copperspice]
+Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
  src/core/CMakeLists.txt                                |  2 +-
  src/gui/CMakeLists.txt                                 | 10 +++++++++-

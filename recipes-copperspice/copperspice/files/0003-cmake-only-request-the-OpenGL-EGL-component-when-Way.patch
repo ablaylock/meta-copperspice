@@ -11,6 +11,7 @@ unqualified find_package(OpenGL) fails too, leaving
 OPENGL_LIBRARIES empty and CsGui unlinkable.
 
 Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
  CMakeLists.txt | 9 ++++++++-
  1 file changed, 8 insertions(+), 1 deletion(-)

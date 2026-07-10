@@ -13,6 +13,7 @@ undefined references to qt_memfill32 and convert_RGB888_to_RGB32_neon
 when linking CsGui for aarch64.
 
 Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
  src/gui/image/image.cmake       | 2 +-
  src/gui/painting/painting.cmake | 2 +-

@@ -22,7 +22,8 @@ was provided (e.g. CopperSpice::linguist) gets a missing-target error;
 that is acceptable, since such a consumer could not have executed the
 target-architecture tool anyway.
 
-Upstream-Status: Pending [https://github.com/copperspice/copperspice]
+Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
  cmake/CopperSpiceConfig.cmake | 19 ++++++++++++++++++-
  1 file changed, 18 insertions(+), 1 deletion(-)
