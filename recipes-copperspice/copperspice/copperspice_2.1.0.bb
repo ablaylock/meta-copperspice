@@ -69,6 +69,13 @@ CXXFLAGS:remove = "-fvisibility-inlines-hidden"
 # make-level parallelism for this recipe (applies to all class variants)
 PARALLEL_MAKE = "-j 6"
 
+# With full -g, libCsGui2.1.so exceeds 4 GiB and a 32-bit ELF cannot
+# represent file offsets past that, so the linker emits a structurally
+# broken library that downstream links reject with "file too short".
+# Line-tables-only debug info keeps 32-bit ARM comfortably inside the
+# format limit (ELF64 targets are unaffected and keep full -g).
+DEBUG_LEVELFLAG:arm = "-g1"
+
 # Target build enables everything KitchenSink links against. WebKit stays
 # off (KitchenSink's CsWebKit use is disabled upstream); no Vulkan in the
 # QEMU images.
