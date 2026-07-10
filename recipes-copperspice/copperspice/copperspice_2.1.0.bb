@@ -97,6 +97,41 @@ PACKAGECONFIG[wayland]     = ",-DCMAKE_DISABLE_FIND_PACKAGE_Wayland=TRUE"
 # alsa-lib leaking into the sysroot via other recipes.
 EXTRA_OECMAKE:class-target = " -DCMAKE_DISABLE_FIND_PACKAGE_ALSA=TRUE"
 
+# Mirror upstream's component dependency rules (top-level CMakeLists.txt
+# "check components dependencies" block) so an invalid selection fails at
+# parse time naming the knobs, instead of deep inside do_configure.
+python __anonymous() {
+    if d.getVar('CLASSOVERRIDE') != 'class-target':
+        return
+
+    pc = (d.getVar('PACKAGECONFIG') or "").split()
+
+    if 'wayland' in pc:
+        bb.fatal("copperspice: the 'wayland' PACKAGECONFIG is not yet "
+                 "supported (planned - needs cs_wayland_scanner support "
+                 "in copperspice-native); use 'x11'")
+
+    rules = {
+        'multimedia':  ['gui', 'network', 'opengl'],
+        'opengl':      ['gui'],
+        'svg':         ['gui'],
+        'xmlpatterns': ['network'],
+        'webkit':      ['gui', 'network'],
+        'psql':        ['sql'],
+        'mysql':       ['sql'],
+        'odbc':        ['sql'],
+    }
+    for knob, needs in sorted(rules.items()):
+        missing = [n for n in needs if n not in pc]
+        if knob in pc and missing:
+            bb.fatal("copperspice: PACKAGECONFIG '%s' also requires: %s"
+                     % (knob, ' '.join(missing)))
+
+    if 'gui' in pc and 'x11' not in pc:
+        bb.fatal("copperspice: PACKAGECONFIG 'gui' needs a platform "
+                 "plugin: add 'x11' (wayland arrives in a later release)")
+}
+
 # Yocto's default -fvisibility-inlines-hidden breaks CsGui linking
 # (confirmed: https://forum.copperspice.com/viewtopic.php?t=4121)
 CXXFLAGS:remove = "-fvisibility-inlines-hidden"
@@ -185,6 +220,7 @@ do_install:append:class-target() {
             CsMultimedia_m3u*)   category=playlistformats ;;
             CsMultimedia_gst_*)  category=mediaservices ;;
             CsPrinterDriver*)    category=printerdrivers ;;
+            CsSql*)              category=sqldrivers ;;
             *) bbfatal "unclassified CopperSpice plugin: $plugin" ;;
         esac
         install -d ${D}${libdir}/copperspice/plugins/$category
