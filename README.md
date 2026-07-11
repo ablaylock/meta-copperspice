@@ -68,7 +68,7 @@ Selecting a knob without its prerequisites fails at parse time, naming
 what's missing, e.g.:
 
 ```
-copperspice: PACKAGECONFIG 'multimedia' also requires: glib network opengl gui
+copperspice: PACKAGECONFIG 'multimedia' also requires: glib
 ```
 
 The full rule set: `multimedia` needs `gui network opengl glib` (GStreamer
