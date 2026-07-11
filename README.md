@@ -23,7 +23,12 @@ host/target tool split, and GUI boot in QEMU checked on all three.
   `recipes-copperspice/cs-hello/files/CMakeLists.txt`).
 - `kitchensink` — the official CopperSpice demo app.
 - `copperspice-demo-image` — sato-based image with both demos.
-- kas configs for reproducible builds on the three QEMU machines.
+- `copperspice-demo-image-weston` — `core-image-weston` plus both demos,
+  used to verify the Wayland platform plugin on QEMU.
+- kas configs for reproducible builds on the three QEMU machines, plus
+  `kas/wayland-only.yml` (drops `x11` from `DISTRO_FEATURES` and adds
+  `glvnd`, for a pure-Wayland world) and `kas/gates.yml` (passwordless
+  root login, for QEMU GUI verification).
 
 ## Build configuration
 
@@ -34,12 +39,15 @@ The default set reproduces what this layer has always built:
 PACKAGECONFIG ??= "gui network x11 multimedia opengl svg sql xmlpatterns openssl cups glib"
 ```
 
-(`x11` is pulled in only when the `x11` `DISTRO_FEATURE` is set, which is
-poky's default.)
+(`x11` and `wayland` are pulled in only when the matching `DISTRO_FEATURE`
+is set. poky carries both by default, so the default build is a **coexist**
+build: both platform plugins land in one `copperspice` build, with xcb
+remaining CopperSpice's runtime default. See "Runtime platform selection"
+below.)
 
 | Knob | Controls | Off sheds |
 |---|---|---|
-| `gui` | CsGui, platform plugins | the whole GUI stack; needs `x11` |
+| `gui` | CsGui, platform plugins | the whole GUI stack; needs `x11` and/or `wayland` |
 | `network` | CsNetwork | sockets, SSL-backed network access |
 | `multimedia` | CsMultimedia (GStreamer backend) | audio/video playback |
 | `opengl` | the CsOpenGL add-on library | just that add-on (see below) |
@@ -53,7 +61,8 @@ poky's default.)
 | `cups` | printing support | CUPS printer driver |
 | `glib` | glib event-loop integration | glib mainloop hookup |
 | `pulseaudio` | CsMultimedia audio output backend (libpulse) | no audio playback (CsMultimedia still does everything else) |
-| `x11` | XCB/X11 platform plugin | the only usable platform plugin today |
+| `x11` | XCB/X11 platform plugin | one of the two platform plugins |
+| `wayland` | Wayland platform plugin (`CsGuiWayland`, EGL client-buffer integration, bradient decoration); deps `wayland wayland-native libxkbcommon virtual/egl`; needs the `wayland` distro feature | the other platform plugin; on by default when the distro has `wayland` (poky does) |
 
 `gui`, `network`, `opengl`, `svg`, `sql`, `xmlpatterns`, `vulkan`, and
 `webkit` map straight to upstream `WITH_*` switches. `psql`, `mysql`, and
@@ -74,14 +83,19 @@ copperspice: PACKAGECONFIG 'multimedia' also requires: glib
 The full rule set: `multimedia` needs `gui network opengl glib` (GStreamer
 is glib-based); `opengl` and `svg` need `gui`; `xmlpatterns` needs
 `network`; `webkit` needs `gui network`; `psql`/`mysql`/`odbc` need `sql`;
-and `gui` needs `x11` (a platform plugin is required — `wayland` is
-declared but rejected at parse time, since it's not supported yet; use
-`x11`).
+and `gui` needs a platform plugin — `x11`, `wayland`, or both.
 
 **OpenGL:** the `opengl` knob only controls the optional CsOpenGL add-on
 library. CsGui itself always compiles its `QOpenGL*` classes and links
-`libGL`, so any `gui` build needs the `opengl` `DISTRO_FEATURE` regardless
-of whether the `opengl` knob is enabled.
+against desktop GL, so any `gui` build needs the `opengl` `DISTRO_FEATURE`
+regardless of whether the `opengl` knob is enabled. Which GL library that
+is depends on the platform: on distros with the `x11` distro feature it's
+classic `virtual/libgl` (GLX-based); on x11-less distros it's `libglvnd`
+instead, and the recipe additionally requires the `glvnd` distro feature
+for `gui` builds there (`REQUIRED_DISTRO_FEATURES`, so `features_check`
+skips the recipe cleanly if it's missing rather than failing deep in the
+build) — legacy Mesa's classic `libGL` doesn't exist in an x11-less
+world, so desktop GL has to come from GLVND's `libOpenGL` over EGL.
 
 **Audio:** PulseAudio (via the `pulseaudio` knob) is CopperSpice's only
 audio output backend at the CS level; ALSA support is dead code upstream
@@ -105,10 +119,26 @@ To override the defaults, set `PACKAGECONFIG:pn-copperspice` in
 `local.conf`, or a kas `local_conf_header` fragment. Known-good minimal
 configs: `headless` (`PACKAGECONFIG = ""`, CsCore+CsXml only) and
 `min-gui` (`PACKAGECONFIG = "gui network x11"`). `scripts/knob-audit.sh`
-only accepts its 17 predefined config names (see the `ALL` list at the
-top of the script, or pass `all` to run every one); to validate a custom
+only accepts its 19 predefined config names (see the `ALL` list at the
+top of the script, or pass `all` to run every one) — including
+`with-wayland` (coexist: both platform plugins built, xcb still the
+runtime default) and `wayland-only` (`x11` off, `wayland` on: no xcb/X11
+libraries, `CS_GUI_PLATFORM_NAME=wayland` exported); to validate a custom
 selection, add a case for it to the script's `configure()` function and
 run that.
+
+## Runtime platform selection
+
+- **Coexist builds** (both `x11` and `wayland` knobs on, poky's default):
+  xcb is CopperSpice's runtime default. Opt an individual app into Wayland
+  with `-platform wayland` on its command line, or by setting
+  `CS_GUI_PLATFORM_NAME=wayland` in its environment.
+- **Wayland-only builds** (`x11` knob off, `wayland` on — no xcb plugin
+  exists in the image at all): the recipe appends
+  `export CS_GUI_PLATFORM_NAME=wayland` to `/etc/profile.d/copperspice.sh`
+  automatically, so login sessions get working GUI apps with no manual
+  configuration. Without this override every app would abort looking for
+  xcb, upstream's hardcoded default platform.
 
 ## Quick start (kas)
 
@@ -152,28 +182,37 @@ kas shell meta-copperspice/kas/qemuarm64.yml -c \
 Add the layer path to `BBLAYERS` in an existing wrynose build
 (openembedded-core + bitbake 2.18 + meta-poky) and add
 `copperspice-demo-image` or the individual recipes to your image. The
-recipes have no dependency on kas. The distro must provide the `x11` and
-`opengl` `DISTRO_FEATURES` (poky's defaults do); without them the
-`copperspice` recipe is skipped and the demo apps fail to resolve their
-dependency on it.
+recipes have no dependency on kas. The distro must provide the `opengl`
+`DISTRO_FEATURE` plus at least one of `x11` or `wayland` (poky's defaults
+provide `opengl` and both platform features, giving a coexist build); on
+an x11-less distro (`wayland` only) the `glvnd` distro feature is also
+required. Without a satisfied platform/GL combination the `copperspice`
+recipe is skipped (`REQUIRED_DISTRO_FEATURES` + `features_check`) and the
+demo apps fail to resolve their dependency on it.
 
 ## The host/target tool split
 
 CopperSpice generates code at build time with its own tools (`uic`, `rcc`,
-`lrelease`, `lconvert`, `lupdate`). In a cross build those tools are target
-binaries and cannot run on the build machine, so this layer builds them
-twice:
+`lrelease`, `lconvert`, `lupdate`), and, for Wayland builds,
+`cs_wayland_scanner` (protocol marshalling code generator) — six tools in
+total. In a cross build those tools are target binaries and cannot run on
+the build machine, so this layer builds them twice:
 
 - `copperspice-native` builds a tools-only configuration (CsCore + CsXml,
-  everything else off) and stages the five tools for the build host.
+  everything else off, `-DWITH_WAYLAND_SCANNER=YES`) and stages all six
+  tools for the build host.
 - The target `copperspice` build points its own tool invocations at the
-  native `uic`/`rcc`/`lrelease` (the only tools CopperSpice runs while
-  building itself), and consumer recipes point all five, via the
+  native `uic`/`rcc`/`lrelease` (and, when the `wayland` knob is on,
+  `cs_wayland_scanner` — the only tools CopperSpice runs while building
+  itself), and consumer recipes point all five non-scanner tools, via the
   `CS_TOOL_UIC`, `CS_TOOL_RCC`, `CS_TOOL_LRELEASE`, `CS_TOOL_LCONVERT`,
-  `CS_TOOL_LUPDATE` CMake cache variables. These variables are added by carried patches 0001 (CopperSpice's
-  own build) and 0002 (the exported `CopperSpiceConfig.cmake`, so any
-  `find_package(CopperSpice)` project gets them); they are no-ops when
-  unset, leaving native builds and upstream behavior unchanged.
+  `CS_TOOL_LUPDATE` CMake cache variables (a `CS_TOOL_CS_WAYLAND_SCANNER`
+  variable also exists for projects that process their own Wayland
+  protocol XML). These variables are added by carried patches 0001
+  (CopperSpice's own build) and 0002 (the exported
+  `CopperSpiceConfig.cmake`, so any `find_package(CopperSpice)` project
+  gets them); they are no-ops when unset, leaving native builds and
+  upstream behavior unchanged.
 
 Application recipes only need:
 
@@ -200,6 +239,13 @@ The class pulls in `copperspice` + `copperspice-native` and passes all five
   `${libdir}/copperspice/plugins/<category>/` (platforms, imageformats,
   xcbglintegrations, ...) and exports `CS_PLUGIN_PATH` via
   `/etc/profile.d/copperspice.sh` (the X session sources `/etc/profile`).
+  All three Wayland sub-plugins (`CsGuiWayland2.1.so`, the EGL
+  client-buffer integration `CsGuiWayland_Egl2.1.so`, and the bradient
+  decoration `CsGuiWayland_bradient2.1.so`) land in the `platforms`
+  category alongside `CsGuiXcb2.1.so` — every Wayland `QFactoryLoader`
+  looks under `/platforms`, unlike XCB's separate `xcbglintegrations`.
+  `libCsWaylandClient2.1.so` is a regular (non-plugin) library and stays
+  directly in `${libdir}`.
 - 32-bit ARM builds use `DEBUG_LEVELFLAG:arm = "-g1"`: with full `-g` the
   unstripped `libCsGui2.1.so` exceeds the 4 GiB ELF32 file-offset limit
   and the linker emits a structurally broken library.
@@ -210,7 +256,7 @@ The class pulls in `copperspice` + `copperspice-native` and passes all five
 
 ## Carried patches
 
-Six patches in `recipes-copperspice/copperspice/files/`, all
+Eleven patches in `recipes-copperspice/copperspice/files/`, all
 `Upstream-Status: Pending`:
 
 - `0001-cmake-support-prebuilt-host-tools-in-the-CopperSpice.patch` —
@@ -238,6 +284,25 @@ Six patches in `recipes-copperspice/copperspice/files/`, all
   define `__ARM_ARCH_7A__`, so 32-bit ARM builds died on
   `#error "Unsupported system architecture"`. Check the numeric
   `__ARM_ARCH` first.
+- `0007-cmake-allow-building-cs_wayland_scanner-standalone.patch` — adds
+  `WITH_WAYLAND_SCANNER` (default OFF) so `cs_wayland_scanner` can be
+  built on its own, letting `copperspice-native` produce a host scanner
+  without enabling GUI or Wayland support.
+- `0008-cmake-demote-the-X11-stack-from-REQUIRED-to-RECOMMEN.patch` —
+  upstream hard-requires the X11/XCB stack even when only the Wayland
+  plugin is wanted; demoting it to RECOMMENDED lets `configure` proceed
+  on x11-less distros.
+- `0009-cmake-locate-EGL-without-FindOpenGL-for-the-Wayland-.patch` —
+  the unconditional `OpenGL::EGL` component request (via `FindOpenGL`)
+  is GLVND-poisoned on legacy Mesa; locate EGL directly with
+  `find_library(NAMES GL OpenGL)` instead, which also covers GLVND
+  sysroots that have no classic `libGL`.
+- `0010-gui-build-QWindowsStyle-for-Wayland-platforms.patch` — CsGui's
+  style factory only compiled `QWindowsStyle` for X11; it's also the
+  base class of `QStyleSheetStyle`, so Wayland builds need it too.
+- `0011-cmake-link-the-GLVND-OpenGL-dispatch-library-when-li.patch` —
+  append GLVND's `libOpenGL` to `OPENGL_LIBRARIES` when classic `libGL`
+  is absent, so linking against desktop GL works on GLVND-only sysroots.
 
 **Note for maintainers:** the CopperSpice sources use CRLF line endings.
 Any patch touching them must reproduce CRLF byte-exact or `do_patch`
@@ -251,14 +316,14 @@ Linux/BSD), tagged for its own upstream.
 ## SDK
 
 `bitbake copperspice-demo-image -c populate_sdk` produces an SDK whose
-host sysroot contains the CopperSpice libraries AND the five host tools
-(`TOOLCHAIN_HOST_TASK` adds both `nativesdk-copperspice` and
-`nativesdk-copperspice-tools` — the tools package split applies to
-nativesdk too, so listing only the former would ship libraries with no
-code generators).
+host sysroot contains the CopperSpice libraries AND all six host tools,
+including `cs_wayland_scanner` (`TOOLCHAIN_HOST_TASK` adds both
+`nativesdk-copperspice` and `nativesdk-copperspice-tools` — the tools
+package split applies to nativesdk too, so listing only the former would
+ship libraries with no code generators).
 
 SDK consumers building CopperSpice applications with CMake must pass the
-five tool overrides. Verified invocation (qemuarm64 SDK):
+tool overrides. Verified invocation (qemuarm64 SDK):
 
 ```
 . <sdk>/environment-setup-cortexa57-poky-linux
@@ -268,8 +333,17 @@ cmake -G Ninja <src> \
     -DCS_TOOL_RCC=$N/rcc \
     -DCS_TOOL_LRELEASE=$N/lrelease \
     -DCS_TOOL_LCONVERT=$N/lconvert \
-    -DCS_TOOL_LUPDATE=$N/lupdate
+    -DCS_TOOL_LUPDATE=$N/lupdate \
+    -DCS_TOOL_CS_WAYLAND_SCANNER=$N/cs_wayland_scanner
 ```
+
+(`CS_TOOL_CS_WAYLAND_SCANNER` only matters to a consumer that processes
+its own Wayland protocol XML with CopperSpice's scanner; KitchenSink and
+CS Hello don't, but the variable is harmless to pass unconditionally.
+Unlike the other five tools, `cs_wayland_scanner` has no target-arch
+build at all — CopperSpice's own target build always points
+`CS_TOOL_CS_WAYLAND_SCANNER` at the *native* scanner via
+`PACKAGECONFIG[wayland]`, so it is not part of `copperspice-tools`.)
 
 ## Troubleshooting
 
@@ -285,9 +359,13 @@ cmake -G Ninja <src> \
   `ssh -L 5901:localhost:5900`, then point a VNC viewer at
   `localhost:5901`. macOS Screen Sharing rejects no-auth VNC servers —
   use TigerVNC or similar. Do not pass `gl` in either setup.
-- **"platform plugin was not found" (key "xcb"):** the app cannot see the
-  plugin directory. Check `/etc/profile.d/copperspice.sh` is present and
-  the session sourced it (`echo $CS_PLUGIN_PATH`).
+- **"platform plugin was not found" (key "xcb" or "wayland"):** the app
+  cannot see the plugin directory. Check `/etc/profile.d/copperspice.sh`
+  is present and the session sourced it (`echo $CS_PLUGIN_PATH`). On a
+  wayland-only build the key is always "xcb" unless
+  `CS_GUI_PLATFORM_NAME=wayland` is set (`echo $CS_GUI_PLATFORM_NAME`) —
+  the recipe sets it automatically in `/etc/profile.d/copperspice.sh`,
+  so an unset value there usually means the session didn't source it.
 
 ## Updating the pins
 
