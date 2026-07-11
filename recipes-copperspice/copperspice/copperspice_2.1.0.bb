@@ -25,6 +25,7 @@ SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}
            file://0006-core-detect-32-bit-ARM-via-the-canonical-__ARM_ARCH-.patch \
            file://0007-cmake-allow-building-cs_wayland_scanner-standalone.patch \
            file://0008-cmake-demote-the-X11-stack-from-REQUIRED-to-RECOMMEN.patch \
+           file://0009-cmake-locate-EGL-without-FindOpenGL-for-the-Wayland-.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
@@ -35,13 +36,24 @@ inherit cmake pkgconfig features_check
 # (src/gui/CMakeLists.txt includes opengl/opengl.cmake with no condition)
 # and upstream configure hard-requires OpenGL when WITH_GUI is on. The
 # 'opengl' knob below only controls the separate CsOpenGL add-on library.
-# gui also requires the x11 distro feature while X11 is the only platform
-# plugin (Phase 2 lifts this for wayland): features_check then skips the
-# recipe cleanly on non-X11 distros instead of the parse-time platform
-# check aborting the parse.
+
+# gui without any platform knob cannot build. Requiring x11 here makes
+# features_check (whose anonymous python runs before this recipe's) skip
+# the recipe cleanly on distros lacking it, instead of the parse-time
+# platform check below aborting the whole parse; on distros that do have
+# x11, explicit misuse still reaches the platform check and its clearer
+# message.
+def cs_platform_fallback(d):
+    pc = (d.getVar('PACKAGECONFIG') or '').split()
+    if 'gui' in pc and 'x11' not in pc and 'wayland' not in pc:
+        return 'x11'
+    return ''
+
 REQUIRED_DISTRO_FEATURES:class-target = " \
-    ${@bb.utils.contains('PACKAGECONFIG', 'gui', 'opengl x11', '', d)} \
+    ${@bb.utils.contains('PACKAGECONFIG', 'gui', 'opengl', '', d)} \
+    ${@cs_platform_fallback(d)} \
     ${@bb.utils.contains('PACKAGECONFIG', 'x11', 'x11', '', d)} \
+    ${@bb.utils.contains('PACKAGECONFIG', 'wayland', 'wayland', '', d)} \
     ${@bb.utils.contains('PACKAGECONFIG', 'vulkan', 'vulkan', '', d)} \
 "
 
@@ -52,9 +64,11 @@ DEPENDS:class-nativesdk = "nativesdk-glib-2.0"
 # The default knob set reproduces the feature set this layer has always
 # built: GUI toolkit on X11 with multimedia, OpenGL, SVG, SQL(sqlite),
 # XmlPatterns, TLS, CUPS printing, and glib event-loop integration.
+# On distros with wayland in DISTRO_FEATURES (poky default) the wayland
+# platform plugin is built too; xcb remains the runtime default.
 PACKAGECONFIG ??= " \
     gui network \
-    ${@bb.utils.filter('DISTRO_FEATURES', 'x11', d)} \
+    ${@bb.utils.filter('DISTRO_FEATURES', 'x11 wayland', d)} \
     multimedia opengl svg sql xmlpatterns openssl cups glib \
 "
 PACKAGECONFIG:class-native = ""
@@ -92,10 +106,15 @@ PACKAGECONFIG[glib]        = ",-DCMAKE_DISABLE_FIND_PACKAGE_GLib2=TRUE -DCMAKE_D
 # XKBCommon (unlike XKBCommon_X11) serves both X11 and Wayland, so
 # libxkbcommon rides each platform knob rather than the disable list.
 PACKAGECONFIG[x11]         = ",-DCMAKE_DISABLE_FIND_PACKAGE_XCB=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_XKBCommon_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11_XCB=TRUE,libice libsm libx11 libxcb libxcursor libxi libxinerama libxkbcommon xcb-util xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm"
-# Wayland support lands in Phase 2 (needs cs_wayland_scanner from
-# copperspice-native); selecting it is rejected at parse time below. The
-# knob exists now so its OFF side keeps wayland detection deterministic.
-PACKAGECONFIG[wayland]     = ",-DCMAKE_DISABLE_FIND_PACKAGE_Wayland=TRUE"
+# Wayland platform plugin. Protocol marshalling code is generated at
+# build time on the host: cs_wayland_scanner comes from
+# copperspice-native (patch 0007 + the CS_TOOL hook in patch 0001), the
+# C protocol stubs from the standard wayland-scanner (wayland-native).
+# CS bundles its protocol XML, so wayland-protocols is not needed.
+# virtual/egl: upstream only builds the plugin when TARGET OpenGL::EGL
+# exists. The OFF side keeps wayland detection deterministic (mesa can
+# leak libwayland into the sysroot).
+PACKAGECONFIG[wayland]     = "-DCS_TOOL_CS_WAYLAND_SCANNER=${STAGING_BINDIR_NATIVE}/cs_wayland_scanner,-DCMAKE_DISABLE_FIND_PACKAGE_Wayland=TRUE,wayland wayland-native libxkbcommon virtual/egl"
 
 # ALSA is dead code in CS 2.1.0: find_package(ALSA) runs but the result
 # is consumed nowhere in the source tree (the only CS-level audio backend
@@ -111,11 +130,6 @@ python __anonymous() {
         return
 
     pc = (d.getVar('PACKAGECONFIG') or "").split()
-
-    if 'wayland' in pc:
-        bb.fatal("copperspice: the 'wayland' PACKAGECONFIG is not yet "
-                 "supported (planned - needs cs_wayland_scanner support "
-                 "in copperspice-native); use 'x11'")
 
     rules = {
         'multimedia':  ['gui', 'network', 'opengl', 'glib'],
@@ -133,9 +147,9 @@ python __anonymous() {
             bb.fatal("copperspice: PACKAGECONFIG '%s' also requires: %s"
                      % (knob, ' '.join(missing)))
 
-    if 'gui' in pc and 'x11' not in pc:
+    if 'gui' in pc and 'x11' not in pc and 'wayland' not in pc:
         bb.fatal("copperspice: PACKAGECONFIG 'gui' needs a platform "
-                 "plugin: add 'x11' (wayland arrives in a later release)")
+                 "plugin: add 'x11' or 'wayland'")
 }
 
 # Yocto's default -fvisibility-inlines-hidden breaks CsGui linking
@@ -156,8 +170,6 @@ DEBUG_LEVELFLAG:arm = "-g1"
 # When cross compiling, CopperSpice's own build runs uic/rcc/lrelease to
 # process its .ui/.qrc/.ts files - use the host tools from
 # copperspice-native (the CS_TOOL_* variables are added by our patches).
-# cs_wayland_scanner is not needed: no wayland libs are in DEPENDS, so the
-# wayland platform plugin is never enabled.
 EXTRA_OECMAKE:class-target += " \
     -DCS_TOOL_UIC=${STAGING_BINDIR_NATIVE}/uic \
     -DCS_TOOL_RCC=${STAGING_BINDIR_NATIVE}/rcc \
@@ -223,6 +235,11 @@ do_install:append:class-target() {
         case "$(basename $plugin)" in
             CsGuiXcb_Glx*)       category=xcbglintegrations ;;
             CsGuiXcb*)           category=platforms ;;
+            # all wayland sub-plugins (generic platform, egl client-buffer
+            # integration, bradient decoration) are loaded from the
+            # "platforms" category - every wayland QFactoryLoader in
+            # src/plugins/platforms/wayland/client uses "/platforms"
+            CsGuiWayland*)       category=platforms ;;
             CsImageFormats*)     category=imageformats ;;
             CsMultimedia_m3u*)   category=playlistformats ;;
             CsMultimedia_gst_*)  category=mediaservices ;;
@@ -237,6 +254,14 @@ do_install:append:class-target() {
     install -d ${D}${sysconfdir}/profile.d
     echo "export CS_PLUGIN_PATH=${libdir}/copperspice/plugins" \
         > ${D}${sysconfdir}/profile.d/copperspice.sh
+    # xcb is upstream's hardcoded default platform. On a wayland-only
+    # build the default must be overridden system-wide or every GUI app
+    # aborts looking for the missing xcb plugin.
+    if ${@bb.utils.contains('PACKAGECONFIG', 'wayland', 'true', 'false', d)} && \
+       ! ${@bb.utils.contains('PACKAGECONFIG', 'x11', 'true', 'false', d)}; then
+        echo "export CS_GUI_PLATFORM_NAME=wayland" \
+            >> ${D}${sysconfdir}/profile.d/copperspice.sh
+    fi
 }
 
 FILES:${PN} += "${libdir}/copperspice/plugins ${sysconfdir}/profile.d/copperspice.sh"
