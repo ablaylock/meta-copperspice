@@ -27,7 +27,7 @@ DEFAULT="gui network x11 multimedia opengl svg sql xmlpatterns openssl cups glib
 
 ALL="no-multimedia no-opengl no-svg no-sql no-xmlpatterns no-openssl \
 no-cups no-glib no-network with-pulseaudio with-psql with-mysql \
-with-odbc with-webkit with-vulkan min-gui headless"
+with-odbc with-webkit with-vulkan min-gui headless with-wayland wayland-only"
 
 mkdir -p "$OUT"
 RESULTS="$OUT/results.tsv"
@@ -36,7 +36,7 @@ RESULTS="$OUT/results.tsv"
 # override; the remaining fields are space-separated lists (empty = skip
 # that check). REQUIRE_NEEDED entries are <lib-glob>:<soname> pairs.
 configure() {
-   PC="" FORBID="" ABSENT="" PRESENT="" GREP_ABSENT="" REQUIRE_NEEDED="" BESTEFFORT=0
+   PC="" FORBID="" ABSENT="" PRESENT="" GREP_ABSENT="" REQUIRE_NEEDED="" PROFILE_GREP="" PROFILE_GREP_ABSENT="" BESTEFFORT=0
    case "$1" in
    no-multimedia)
       PC="gui network x11 opengl svg sql xmlpatterns openssl cups glib"
@@ -103,6 +103,17 @@ configure() {
       FORBID="libGL.so.1 libX11.so.6 libfontconfig.so.1 libfreetype.so.6"
       ABSENT="libCsGui2.1.so copperspice/plugins"
       PRESENT="libCsCore2.1.so libCsXml2.1.so" ;;
+   with-wayland) # coexist: both platform plugins from one build
+      PC="$DEFAULT wayland"
+      PRESENT="copperspice/plugins/platforms/CsGuiWayland2.1.so copperspice/plugins/platforms/CsGuiWayland_Egl2.1.so copperspice/plugins/platforms/CsGuiWayland_bradient2.1.so copperspice/plugins/platforms/CsGuiXcb2.1.so libCsWaylandClient2.1.so"
+      REQUIRE_NEEDED="libCsWaylandClient2.1.so:libwayland-client.so.0"
+      PROFILE_GREP_ABSENT="CS_GUI_PLATFORM_NAME" ;;
+   wayland-only) # x11 knob off; patch 0008 lets configure proceed
+      PC="gui network wayland multimedia opengl svg sql xmlpatterns openssl cups glib"
+      FORBID="libX11.so.6 libxcb.so.1"
+      ABSENT="copperspice/plugins/platforms/CsGuiXcb2.1.so copperspice/plugins/xcbglintegrations"
+      PRESENT="copperspice/plugins/platforms/CsGuiWayland2.1.so libCsWaylandClient2.1.so"
+      PROFILE_GREP="CS_GUI_PLATFORM_NAME=wayland" ;;
    *) echo "unknown config: $1" >&2; exit 2 ;;
    esac
 }
@@ -171,6 +182,20 @@ EOF
          bad="$bad configure-log-missing:$WORK/temp/log.do_configure"
       elif grep -q "$GREP_ABSENT" "$log"; then
          bad="$bad configure-log-shows:$GREP_ABSENT"
+      fi
+   fi
+
+   if [ -n "$PROFILE_GREP" ] || [ -n "$PROFILE_GREP_ABSENT" ]; then
+      prof="$WORK/image/etc/profile.d/copperspice.sh"
+      if [ ! -f "$prof" ]; then
+         bad="$bad profile-missing:$prof"
+      else
+         if [ -n "$PROFILE_GREP" ] && ! grep -q "$PROFILE_GREP" "$prof"; then
+            bad="$bad profile-lacks:$PROFILE_GREP"
+         fi
+         if [ -n "$PROFILE_GREP_ABSENT" ] && grep -q "$PROFILE_GREP_ABSENT" "$prof"; then
+            bad="$bad profile-unexpectedly-has:$PROFILE_GREP_ABSENT"
+         fi
       fi
    fi
 
