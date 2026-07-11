@@ -25,6 +25,85 @@ host/target tool split, and GUI boot in QEMU checked on all three.
 - `copperspice-demo-image` — sato-based image with both demos.
 - kas configs for reproducible builds on the three QEMU machines.
 
+## Build configuration
+
+`copperspice` exposes upstream's `WITH_*` options as `PACKAGECONFIG` knobs.
+The default set reproduces what this layer has always built:
+
+```
+PACKAGECONFIG ??= "gui network x11 multimedia opengl svg sql xmlpatterns openssl cups glib"
+```
+
+(`x11` is pulled in only when the `x11` `DISTRO_FEATURE` is set, which is
+poky's default.)
+
+| Knob | Controls | Off sheds |
+|---|---|---|
+| `gui` | CsGui, platform plugins | the whole GUI stack; needs `x11` |
+| `network` | CsNetwork | sockets, SSL-backed network access |
+| `multimedia` | CsMultimedia (GStreamer backend) | audio/video playback |
+| `opengl` | the CsOpenGL add-on library | just that add-on (see below) |
+| `svg` | SVG image format plugin | `.svg` loading |
+| `sql` | CsSql core + the bundled SQLite driver | SQL access entirely |
+| `xmlpatterns` | CsXmlPatterns (XQuery/XPath) | that module only |
+| `vulkan` | CsVulkan | needs the `vulkan` distro feature |
+| `webkit` | CsWebKit | see verification note below |
+| `psql`, `mysql`, `odbc` | extra CsSql driver plugins | those drivers |
+| `openssl` | TLS support | see runtime note below |
+| `cups` | printing support | CUPS printer driver |
+| `glib` | glib event-loop integration | glib mainloop hookup |
+| `pulseaudio` | PulseAudio detection | (unused by CS 2.1.0; ALSA too) |
+| `x11` | XCB/X11 platform plugin | the only usable platform plugin today |
+
+`gui`, `network`, `opengl`, `svg`, `sql`, `xmlpatterns`, `vulkan`, and
+`webkit` map straight to upstream `WITH_*` switches. `psql`, `mysql`, and
+`odbc` are extra CsSql driver plugins layered on top of `sql`. `openssl`,
+`cups`, `pulseaudio`, `glib`, and `x11` have no upstream switch at all —
+upstream only offers `find_package()` autodetection for them, so the OFF
+side of each knob explicitly forbids that `find_package()` call; otherwise
+whatever happened to be staged in the sysroot (or not) would silently
+decide the feature, breaking reproducibility.
+
+Selecting a knob without its prerequisites fails at parse time, naming
+what's missing, e.g.:
+
+```
+copperspice: PACKAGECONFIG 'multimedia' also requires: glib network opengl gui
+```
+
+The full rule set: `multimedia` needs `gui network opengl glib` (GStreamer
+is glib-based); `opengl` and `svg` need `gui`; `xmlpatterns` needs
+`network`; `webkit` needs `gui network`; `psql`/`mysql`/`odbc` need `sql`;
+and `gui` needs `x11` (a platform plugin is required — `wayland` is
+declared but rejected at parse time, since it's not supported yet; use
+`x11`).
+
+**OpenGL:** the `opengl` knob only controls the optional CsOpenGL add-on
+library. CsGui itself always compiles its `QOpenGL*` classes and links
+`libGL`, so any `gui` build needs the `opengl` `DISTRO_FEATURE` regardless
+of whether the `opengl` knob is enabled.
+
+`psql`, `mysql`, and `odbc` need their client libraries from
+meta-openembedded's `meta-oe` layer, which this layer does not otherwise
+require — add `meta-oe` to `bblayers.conf` before enabling them (see
+`kas/audit.yml` for a pinned example). `vulkan` needs the `vulkan`
+`DISTRO_FEATURE` (for `vulkan-loader`). `openssl` is a runtime dlopen
+dependency — CsNetwork loads `libssl`/`libcrypto` at runtime rather than
+linking them, so the knob only adds RDEPENDS.
+
+Every knob combination in `scripts/knob-audit.sh` is build-verified on
+`qemuarm64`, except `webkit`: `WITH_WEBKIT=YES` fails to compile against
+oe-core's default `-Werror=format-security` hardening (upstream CS WebKit
+overrides its own warning flags), so `webkit` is provided as upstream
+offers it, not verified by this layer.
+
+To override the defaults, set `PACKAGECONFIG:pn-copperspice` in
+`local.conf`, or a kas `local_conf_header` fragment. Known-good minimal
+configs: `headless` (`PACKAGECONFIG = ""`, CsCore+CsXml only) and
+`min-gui` (`PACKAGECONFIG = "gui network x11"`). Run
+`scripts/knob-audit.sh` (from the workspace root) to validate a custom
+selection.
+
 ## Quick start (kas)
 
 Work from a workspace directory ABOVE this repo — builds, downloads, and
