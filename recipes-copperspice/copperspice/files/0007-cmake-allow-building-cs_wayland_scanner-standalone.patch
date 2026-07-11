@@ -1,0 +1,50 @@
+From 38acd6f872f184449d93f48a90175a2fb8f0aa56 Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Sat, 11 Jul 2026 04:40:23 -0600
+Subject: [PATCH] cmake: allow building cs_wayland_scanner standalone
+
+cs_wayland_scanner generates CopperSpice wayland protocol marshalling
+code at build time and links only CsCore and CsXml, but it is only
+built as a side effect of the Wayland platform plugin. Cross builds
+need a host-arch scanner from a minimal tools-only host build where
+neither the GUI nor Wayland support is enabled.
+
+Add WITH_WAYLAND_SCANNER (default OFF) to build the scanner standalone.
+
+Upstream-Status: Pending
+
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
+---
+ CMakeLists.txt | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c1096df..adcfe78 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -231,6 +231,8 @@ option(WITH_MYSQL_PLUGIN "Build MySQL database plugin (if possible)" ON)
+ 
+ option(WITH_ODBC_PLUGIN "Build ODBC database plugin (if possible)" ON)
+ 
++option(WITH_WAYLAND_SCANNER "Build the cs_wayland_scanner code generator standalone" OFF)
++
+ foreach(component ${CS_OPTIONAL_COMPONENTS})
+    string(TOUPPER ${component} uppercomp)
+    option(WITH_${uppercomp} "Build ${component} component" ON)
+@@ -758,6 +760,13 @@ if (WITH_GUI)
+    add_subdirectory(src/plugins/printerdrivers)
+ endif()
+ 
++# cs_wayland_scanner is a build time code generator which links only CsCore
++# and CsXml. Building it standalone lets a cross build produce a host
++# scanner without enabling the GUI or Wayland support.
++if (WITH_WAYLAND_SCANNER AND NOT BUILD_PLATFORMS_WAYLAND_PLUGIN)
++   add_subdirectory(src/plugins/platforms/wayland/scanner)
++endif()
++
+ # catch2
+ if (BUILD_TESTS)
+    enable_testing()
+-- 
+2.43.0
+

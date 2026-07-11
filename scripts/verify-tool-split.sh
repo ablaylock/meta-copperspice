@@ -26,7 +26,7 @@ else
 fi
 
 # 2. the native tools used during the build are host binaries
-for t in uic rcc lrelease lconvert lupdate; do
+for t in uic rcc lrelease lconvert lupdate cs_wayland_scanner; do
    p=$(find tmp/work/*-linux/copperspice-native -path "*/sysroot-destdir/*/bin/$t" 2>/dev/null | head -n1)
    if [ -n "$p" ] && file "$p" | grep -q "x86-64"; then
       echo "PASS: native $t is a host binary"

@@ -23,6 +23,7 @@ SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}
            file://0004-cmake-build-the-NEON-drawhelpers-on-64-bit-ARM.patch \
            file://0005-cmake-do-not-export-sysroot-paths-for-private-depend.patch \
            file://0006-core-detect-32-bit-ARM-via-the-canonical-__ARM_ARCH-.patch \
+           file://0007-cmake-allow-building-cs_wayland_scanner-standalone.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
@@ -163,7 +164,8 @@ EXTRA_OECMAKE:class-target += " \
 "
 
 # native/nativesdk builds exist to provide the build tools (uic, rcc,
-# lrelease, lconvert, lupdate); those need only CsCore and CsXml
+# lrelease, lconvert, lupdate, cs_wayland_scanner); those need only
+# CsCore and CsXml
 CS_FEATURES_OFF = " \
     -DWITH_GUI=NO \
     -DWITH_MULTIMEDIA=NO \
@@ -175,8 +177,8 @@ CS_FEATURES_OFF = " \
     -DWITH_WEBKIT=NO \
     -DWITH_XMLPATTERNS=NO \
 "
-EXTRA_OECMAKE:class-native = "${CS_FEATURES_OFF}"
-EXTRA_OECMAKE:class-nativesdk = "${CS_FEATURES_OFF}"
+EXTRA_OECMAKE:class-native = "${CS_FEATURES_OFF} -DWITH_WAYLAND_SCANNER=YES"
+EXTRA_OECMAKE:class-nativesdk = "${CS_FEATURES_OFF} -DWITH_WAYLAND_SCANNER=YES"
 
 BBCLASSEXTEND = "native nativesdk"
 
