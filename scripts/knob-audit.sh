@@ -48,8 +48,7 @@ configure() {
       PRESENT="libCsGui2.1.so" ;;   # CsGui itself still links libGL - expected
    no-svg)
       PC="gui network x11 multimedia opengl sql xmlpatterns openssl cups glib"
-      ABSENT="libCsSvg2.1.so"
-      GREP_ABSENT="" ;;
+      ABSENT="libCsSvg2.1.so" ;;
    no-sql)
       PC="gui network x11 multimedia opengl svg xmlpatterns openssl cups glib"
       FORBID="libsqlite3.so.0"
@@ -138,10 +137,14 @@ EOF
 
    bad=""
    lib="$WORK/image/usr/lib"
+   if [ ! -d "$lib" ]; then
+      record "$name" "FAIL" "image dir missing: $lib"
+      return 1
+   fi
 
    for so in $FORBID; do
       hits=$(find "$lib" -name "*.so*" -type f \
-                -exec sh -c 'readelf -d "$1" 2>/dev/null | grep -q "\[$2\]" && echo "$1"' _ {} "$so" \;)
+                -exec sh -c 'readelf -d "$1" 2>/dev/null | grep -qF "[$2]" && echo "$1"' _ {} "$so" \;)
       [ -z "$hits" ] || bad="$bad forbidden-NEEDED:$so($hits)"
    done
 
@@ -149,7 +152,7 @@ EOF
       glob="${pair%%:*}"; so="${pair##*:}"
       found=0
       for f in "$lib"/$glob; do
-         [ -f "$f" ] && readelf -d "$f" 2>/dev/null | grep -q "\[$so\]" && found=1
+         [ -f "$f" ] && readelf -d "$f" 2>/dev/null | grep -qF "[$so]" && found=1
       done
       [ $found -eq 1 ] || bad="$bad missing-NEEDED:$glob:$so"
    done
@@ -164,7 +167,9 @@ EOF
 
    if [ -n "$GREP_ABSENT" ]; then
       log=$(ls "$WORK"/temp/log.do_configure 2>/dev/null | head -n1)
-      if [ -n "$log" ] && grep -q "$GREP_ABSENT" "$log"; then
+      if [ -z "$log" ]; then
+         bad="$bad configure-log-missing:$WORK/temp/log.do_configure"
+      elif grep -q "$GREP_ABSENT" "$log"; then
          bad="$bad configure-log-shows:$GREP_ABSENT"
       fi
    fi

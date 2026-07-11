@@ -33,8 +33,12 @@ inherit cmake pkgconfig features_check
 # (src/gui/CMakeLists.txt includes opengl/opengl.cmake with no condition)
 # and upstream configure hard-requires OpenGL when WITH_GUI is on. The
 # 'opengl' knob below only controls the separate CsOpenGL add-on library.
+# gui also requires the x11 distro feature while X11 is the only platform
+# plugin (Phase 2 lifts this for wayland): features_check then skips the
+# recipe cleanly on non-X11 distros instead of the parse-time platform
+# check aborting the parse.
 REQUIRED_DISTRO_FEATURES:class-target = " \
-    ${@bb.utils.contains('PACKAGECONFIG', 'gui', 'opengl', '', d)} \
+    ${@bb.utils.contains('PACKAGECONFIG', 'gui', 'opengl x11', '', d)} \
     ${@bb.utils.contains('PACKAGECONFIG', 'x11', 'x11', '', d)} \
     ${@bb.utils.contains('PACKAGECONFIG', 'vulkan', 'vulkan', '', d)} \
 "
