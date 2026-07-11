@@ -1,0 +1,62 @@
+From 7d77d4003da75cbb33fb7bf8e81b8afe836d3530 Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Sat, 11 Jul 2026 04:51:06 -0600
+Subject: [PATCH] cmake: demote the X11 stack from REQUIRED to RECOMMENDED
+
+The X11, XCB, XKBCommon_X11, and X11_XCB packages are only consumed by
+the xcb platform plugin, yet they are marked TYPE REQUIRED whenever the
+GUI is built, so a Wayland-only system cannot configure at all. Demote
+them to RECOMMENDED: the xcb plugin is already gated on XCB_FOUND, and
+the existing "neither XCB nor Wayland" FATAL_ERROR check still rejects
+a build with no platform plugin.
+
+Upstream-Status: Pending
+
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
+---
+ CMakeLists.txt | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index adcfe78..dc1aa62 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -547,7 +547,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+          PURPOSE "Required for the X11 display plugin"
+          DESCRIPTION "Open source implementation of the X Window System"
+          URL "https://www.x.org"
+-         TYPE REQUIRED
++         TYPE RECOMMENDED
+       )
+ 
+       find_package(XCB COMPONENTS xcb xcb-image xcb-icccm xcb-sync xcb-xfixes xcb-shm xcb-randr
+@@ -556,7 +556,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+          PURPOSE "Required for XCB integration support"
+          DESCRIPTION "Open source implementation of the XCB Interface for the X11 Window System"
+          URL "https://xcb.freedesktop.org"
+-         TYPE REQUIRED
++         TYPE RECOMMENDED
+       )
+ 
+       find_package(XKBCommon_X11)
+@@ -564,7 +564,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+          PURPOSE "Required for XKB X11 integration support"
+          DESCRIPTION "Keyboard library"
+          URL "https://xkbcommon.org"
+-         TYPE REQUIRED
++         TYPE RECOMMENDED
+       )
+ 
+       find_package(X11_XCB)
+@@ -572,7 +572,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+          PURPOSE "Required for X11 XCB support"
+          DESCRIPTION "Integration between X11 and XCB"
+          URL "https://xcb.freedesktop.org"
+-         TYPE REQUIRED
++         TYPE RECOMMENDED
+       )
+ 
+       find_package(XKBCommon)
+-- 
+2.43.0
+

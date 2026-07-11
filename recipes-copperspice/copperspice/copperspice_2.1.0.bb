@@ -24,6 +24,7 @@ SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}
            file://0005-cmake-do-not-export-sysroot-paths-for-private-depend.patch \
            file://0006-core-detect-32-bit-ARM-via-the-canonical-__ARM_ARCH-.patch \
            file://0007-cmake-allow-building-cs_wayland_scanner-standalone.patch \
+           file://0008-cmake-demote-the-X11-stack-from-REQUIRED-to-RECOMMEN.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
