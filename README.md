@@ -230,8 +230,9 @@ The class pulls in `copperspice` + `copperspice-native` and passes all five
   e.g. `libCsCore2.1.so`), so the recipe treats `.so` as runtime, not dev.
 - `copperspice-dev` — headers, CMake package, pkgconfig.
 - `copperspice-tools` — target-arch `uic`/`rcc`/`lrelease`/`lconvert`/
-  `lupdate`/`linguist`, only useful for development ON the device. Never
-  installed in images; the verify script asserts this.
+  `lupdate`/`linguist` (plus `cs_wayland_scanner` on wayland builds),
+  only useful for development ON the device. Never installed in images;
+  the verify script asserts this.
 - **Plugin layout:** upstream installs plugins flat in `${libdir}`, but at
   runtime QFactoryLoader only searches `<librarypath>/<category>/`, so a
   flat layout means no GUI app can start ("platform plugin was not found",
@@ -340,10 +341,13 @@ cmake -G Ninja <src> \
 (`CS_TOOL_CS_WAYLAND_SCANNER` only matters to a consumer that processes
 its own Wayland protocol XML with CopperSpice's scanner; KitchenSink and
 CS Hello don't, but the variable is harmless to pass unconditionally.
-Unlike the other five tools, `cs_wayland_scanner` has no target-arch
-build at all — CopperSpice's own target build always points
-`CS_TOOL_CS_WAYLAND_SCANNER` at the *native* scanner via
-`PACKAGECONFIG[wayland]`, so it is not part of `copperspice-tools`.)
+Like the other five tools, `cs_wayland_scanner` also gets a target-arch
+build: upstream builds the scanner as part of the Wayland platform
+plugin, so any target build with the `wayland` knob installs it to
+`${bindir}`, where it is packaged into `copperspice-tools` — never in
+images, like the rest of the target tools. The target build never runs
+that copy; its codegen uses the copperspice-native scanner via
+`CS_TOOL_CS_WAYLAND_SCANNER`.)
 
 ## Troubleshooting
 
