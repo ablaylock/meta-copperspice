@@ -1,4 +1,4 @@
-From 17f888453543f63b64ec87b46cd960720c8dfb20 Mon Sep 17 00:00:00 2001
+From 5bd778a002de73917b38c4068964cc3552586555 Mon Sep 17 00:00:00 2001
 From: Allen Blaylock <alblay.lhs@gmail.com>
 Date: Thu, 9 Jul 2026 13:23:55 -0600
 Subject: [PATCH] cmake: link OpenGL explicitly on Linux/BSD
@@ -14,17 +14,22 @@ the KitchenSink target already uses the plain signature and CMake
 forbids mixing it with the keyword signature. Plain find_package
 (no COMPONENTS) is used deliberately.
 
+On GLX-less systems (wayland only) there is no classic libGL and
+FindOpenGL leaves OPENGL_FOUND unset; append the GLVND libOpenGL
+dispatch library instead so the direct GL calls still resolve where
+desktop GL exists without GLX.
+
 Upstream-Status: Pending [https://github.com/copperspice/kitchensink]
 Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
- src/CMakeLists.txt | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ src/CMakeLists.txt | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
 
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d3c3bfe..722250b 100644
+index d3c3bfe..eecbc56 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -170,6 +170,15 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+@@ -170,6 +170,21 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
  elseif(CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
     set_target_properties(KitchenSink PROPERTIES OUTPUT_NAME kitchensink)
  
@@ -33,7 +38,13 @@ index d3c3bfe..722250b 100644
 +   # relying on it propagating from CsGui/CsOpenGL
 +   find_package(OpenGL)
 +
-+   if (OPENGL_FOUND)
++   if (NOT OPENGL_gl_LIBRARY AND OPENGL_opengl_LIBRARY)
++      # GLX-less systems (wayland only): no classic libGL; link the GLVND
++      # libOpenGL dispatch library for the desktop GL entry points.
++      list(APPEND OPENGL_LIBRARIES ${OPENGL_opengl_LIBRARY})
++   endif()
++
++   if (OPENGL_FOUND OR OPENGL_opengl_LIBRARY)
 +      target_link_libraries(KitchenSink ${OPENGL_LIBRARIES})
 +   endif()
 +

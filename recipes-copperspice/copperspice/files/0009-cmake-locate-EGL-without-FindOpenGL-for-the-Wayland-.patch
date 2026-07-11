@@ -45,7 +45,7 @@ index dc1aa62..79dac31 100644
 +         # on legacy Mesa those entry points live in libGL.
 +         find_library(CS_EGL_LIBRARY NAMES EGL)
 +         find_path(CS_EGL_INCLUDE_DIR NAMES EGL/egl.h)
-+         find_library(CS_EGL_GL_LIBRARY NAMES GL)
++         find_library(CS_EGL_GL_LIBRARY NAMES GL OpenGL)
 +         if (CS_EGL_LIBRARY AND CS_EGL_INCLUDE_DIR AND CS_EGL_GL_LIBRARY
 +               AND NOT TARGET OpenGL::EGL)
 +            add_library(OpenGL::EGL UNKNOWN IMPORTED)

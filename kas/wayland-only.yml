@@ -1,0 +1,21 @@
+# Stack after a machine config to build the pure-wayland world:
+#   kas shell meta-copperspice/kas/qemux86-64.yml:meta-copperspice/kas/wayland-only.yml ...
+# Dropping x11 from DISTRO_FEATURES makes the copperspice default
+# PACKAGECONFIG select wayland as the only platform plugin, and the
+# recipe then exports CS_GUI_PLATFORM_NAME=wayland in profile.d.
+# NOTE: rebuilds most of the GUI stack (mesa etc.) without x11.
+header:
+  version: 14
+
+target: copperspice-demo-image-weston
+
+local_conf_header:
+  wayland-only: |
+    DISTRO_FEATURES:remove = "x11"
+    # CopperSpice is a desktop-GL toolkit: in an x11-less world mesa
+    # provides no classic libGL (GLX), so desktop GL must come from the
+    # GLVND dispatch library (libOpenGL) over EGL. wrynose wires GLVND
+    # as a distro feature: it enables mesa's glvnd knob and flips the
+    # virtual/egl and virtual/libgl providers to libglvnd, whose
+    # libOpenGL supplies desktop GL without GLX.
+    DISTRO_FEATURES:append = " glvnd"

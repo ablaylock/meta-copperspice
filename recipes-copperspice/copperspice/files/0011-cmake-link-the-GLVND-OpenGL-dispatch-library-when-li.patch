@@ -1,0 +1,43 @@
+From 51e60a3eac75e21d47643e0514e1089c819dcd5a Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Sat, 11 Jul 2026 10:29:38 -0600
+Subject: [PATCH 11/11] cmake: link the GLVND OpenGL dispatch library when
+ libGL is absent
+
+On GLX-less systems (Wayland only), Mesa provides no classic libGL;
+desktop GL entry points come from the GLVND libOpenGL dispatch library
+instead. FindOpenGL only selects GLVND together with GLX, so
+OPENGL_LIBRARIES ends up without any GL provider and CsGui fails to
+link with undefined references to the gl* entry points.
+
+Append libOpenGL to OPENGL_LIBRARIES when there is no classic libGL.
+Systems with libGL are unaffected.
+
+Upstream-Status: Pending
+
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
+---
+ CMakeLists.txt | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 79dac31..77a5987 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -636,6 +636,13 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+          URL "http://www.mesa3d.org/"
+          TYPE REQUIRED
+       )
++
++      if (NOT OPENGL_gl_LIBRARY AND OPENGL_opengl_LIBRARY)
++         # GLX-less systems (wayland only): there is no classic libGL, and
++         # FindOpenGL only pairs the GLVND dispatch library with GLX. Link
++         # the GLVND libOpenGL directly for the desktop GL entry points.
++         list(APPEND OPENGL_LIBRARIES ${OPENGL_opengl_LIBRARY})
++      endif()
+    endif()
+ 
+    if (WITH_WEBKIT)
+-- 
+2.43.0
+

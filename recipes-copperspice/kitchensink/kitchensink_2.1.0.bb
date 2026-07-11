@@ -16,7 +16,8 @@ SRCREV = "bcdfe7ef3d51b3be3c5528965805e4eeab52d2d9"
 
 inherit copperspice features_check
 
-REQUIRED_DISTRO_FEATURES = "x11"
+# the demo apps need a windowing platform - either one will do
+ANY_OF_DISTRO_FEATURES = "x11 wayland"
 
 # Upstream's install step builds a portable-app layout and copies the
 # CopperSpice libraries next to the binary (cs_copy_library). Skip it and

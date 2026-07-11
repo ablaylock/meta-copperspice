@@ -26,6 +26,8 @@ SRC_URI = "https://download.copperspice.com/copperspice/source/copperspice-${PV}
            file://0007-cmake-allow-building-cs_wayland_scanner-standalone.patch \
            file://0008-cmake-demote-the-X11-stack-from-REQUIRED-to-RECOMMEN.patch \
            file://0009-cmake-locate-EGL-without-FindOpenGL-for-the-Wayland-.patch \
+           file://0010-gui-build-QWindowsStyle-for-Wayland-platforms.patch \
+           file://0011-cmake-link-the-GLVND-OpenGL-dispatch-library-when-li.patch \
            "
 SRC_URI[sha256sum] = "377844cd3b9199f763411e8c7705f00a50b5d6f695541ad378597ee2355319e2"
 
@@ -43,6 +45,11 @@ inherit cmake pkgconfig features_check
 # platform check below aborting the whole parse; on distros that do have
 # x11, explicit misuse still reaches the platform check and its clearer
 # message.
+# On x11-less distros there is no classic libGL (every provider's libGL
+# is GLX-based); desktop GL must come from GLVND's libOpenGL, so GUI
+# builds there require the 'glvnd' distro feature and depend on
+# libglvnd instead of virtual/libgl. features_check then skips the
+# recipe cleanly on x11-less distros without glvnd.
 def cs_platform_fallback(d):
     pc = (d.getVar('PACKAGECONFIG') or '').split()
     if 'gui' in pc and 'x11' not in pc and 'wayland' not in pc:
@@ -51,6 +58,7 @@ def cs_platform_fallback(d):
 
 REQUIRED_DISTRO_FEATURES:class-target = " \
     ${@bb.utils.contains('PACKAGECONFIG', 'gui', 'opengl', '', d)} \
+    ${@bb.utils.contains('PACKAGECONFIG', 'gui', bb.utils.contains('DISTRO_FEATURES', 'x11', '', 'glvnd', d), '', d)} \
     ${@cs_platform_fallback(d)} \
     ${@bb.utils.contains('PACKAGECONFIG', 'x11', 'x11', '', d)} \
     ${@bb.utils.contains('PACKAGECONFIG', 'wayland', 'wayland', '', d)} \
@@ -76,7 +84,11 @@ PACKAGECONFIG:class-nativesdk = ""
 
 # Component switches (upstream WITH_* options). Interdependencies are
 # validated at parse time below, mirroring upstream's configure rules.
-PACKAGECONFIG[gui]         = "-DWITH_GUI=YES,-DWITH_GUI=NO -DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE,fontconfig freetype jpeg virtual/libgl"
+# CS_GL_DEP is hoisted out of the gui knob because PACKAGECONFIG flag
+# values are comma-split before expansion, so the inline python (which
+# contains commas) cannot appear in the flag itself.
+CS_GL_DEP = "${@bb.utils.contains('DISTRO_FEATURES', 'x11', 'virtual/libgl', 'libglvnd', d)}"
+PACKAGECONFIG[gui]         = "-DWITH_GUI=YES,-DWITH_GUI=NO -DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE,fontconfig freetype jpeg ${CS_GL_DEP}"
 PACKAGECONFIG[network]     = "-DWITH_NETWORK=YES,-DWITH_NETWORK=NO"
 PACKAGECONFIG[opengl]      = "-DWITH_OPENGL=YES,-DWITH_OPENGL=NO"
 PACKAGECONFIG[multimedia]  = "-DWITH_MULTIMEDIA=YES,-DWITH_MULTIMEDIA=NO,gstreamer1.0 gstreamer1.0-plugins-base"

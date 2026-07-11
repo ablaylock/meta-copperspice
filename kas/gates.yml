@@ -1,0 +1,10 @@
+# GUI-gate convenience: passwordless root login (ssh + console) on QEMU
+# verification images (the retired combined 'debug-tweaks' feature's
+# login-related constituents). Adds no packages, so image manifests stay
+# comparable.
+header:
+  version: 14
+
+local_conf_header:
+  copperspice-gates: |
+    EXTRA_IMAGE_FEATURES:append = " empty-root-password allow-empty-password allow-root-login"

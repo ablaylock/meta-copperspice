@@ -1,0 +1,38 @@
+From 0237f3f90dede502e49f5fde83d2a54ffdc299e6 Mon Sep 17 00:00:00 2001
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Sat, 11 Jul 2026 10:29:23 -0600
+Subject: [PATCH 10/11] gui: build QWindowsStyle for Wayland platforms
+
+QStyleSheetStyle derives from QWindowsStyle and is compiled
+unconditionally, but qwindows_style.cpp is only compiled on Linux when
+X11 is found (it already builds unconditionally on Windows and macOS).
+A Wayland-only Linux build therefore fails to link CsGui with undefined
+QWindowsStyle symbols in qstylefactory and qstylesheetstyle.
+
+Compile the style whenever a windowing platform is available.
+
+Upstream-Status: Pending
+
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
+---
+ src/gui/styles/styles.cmake | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/gui/styles/styles.cmake b/src/gui/styles/styles.cmake
+index 46d3862..95682c4 100644
+--- a/src/gui/styles/styles.cmake
++++ b/src/gui/styles/styles.cmake
+@@ -109,7 +109,9 @@ target_sources(CsGui
+    ${CMAKE_CURRENT_BINARY_DIR}/qrc_qstyle.cpp
+ )
+ 
+-if(X11_FOUND)
++# QWindowsStyle is the base class of QStyleSheetStyle (always compiled),
++# so it is required for every windowing platform, not only X11
++if(X11_FOUND OR Wayland_FOUND)
+    target_sources(CsGui
+       PRIVATE
+       ${CMAKE_CURRENT_SOURCE_DIR}/styles/qwindows_style.cpp
+-- 
+2.43.0
+

@@ -18,7 +18,8 @@ S = "${UNPACKDIR}"
 
 inherit copperspice features_check
 
-REQUIRED_DISTRO_FEATURES = "x11"
+# the demo apps need a windowing platform - either one will do
+ANY_OF_DISTRO_FEATURES = "x11 wayland"
 
 do_install:append() {
     install -d ${D}${datadir}/applications
