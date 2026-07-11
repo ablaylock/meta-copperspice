@@ -64,9 +64,10 @@ configure() {
       PC="gui network x11 multimedia opengl svg sql xmlpatterns openssl glib"
       FORBID="libcups.so.2"
       ABSENT="copperspice/plugins/printerdrivers" ;;
-   no-glib)
-      PC="gui network x11 multimedia opengl svg sql xmlpatterns openssl cups"
-      FORBID="libglib-2.0.so.0 libgobject-2.0.so.0" ;;
+   no-glib) # glib off forces multimedia off too (gstreamer is glib-based)
+      PC="gui network x11 opengl svg sql xmlpatterns openssl cups"
+      FORBID="libglib-2.0.so.0 libgobject-2.0.so.0"
+      ABSENT="libCsMultimedia2.1.so" ;;
    no-network) # network off forces multimedia+xmlpatterns off too
       PC="gui x11 svg sql openssl cups glib"
       ABSENT="libCsNetwork2.1.so libCsXmlPatterns2.1.so libCsMultimedia2.1.so" ;;
@@ -79,7 +80,8 @@ configure() {
       REQUIRE_NEEDED="copperspice/plugins/sqldrivers/CsSql*.so:libpq.so.5" ;;
    with-mysql)
       PC="$DEFAULT mysql"
-      PRESENT="copperspice/plugins/sqldrivers" ;;
+      PRESENT="copperspice/plugins/sqldrivers"
+      REQUIRE_NEEDED="copperspice/plugins/sqldrivers/CsSql*.so:libmariadb.so.3" ;;
    with-odbc)
       PC="$DEFAULT odbc"
       PRESENT="copperspice/plugins/sqldrivers"
@@ -117,8 +119,14 @@ local_conf_header:
   knob-audit-override: |
     PACKAGECONFIG:pn-copperspice = "$PC"
 EOF
+   : > "$OUT/$name.build.log"
+   # A re-run with unchanged task hashes would setscene-skip do_install and
+   # leave a stale image dir from the previous config; clean first so the
+   # audited artifacts are always this config's own.
+   kas shell "$KAS_CFG:$GEN/$name.yml" -c 'bitbake copperspice -c cleansstate' \
+      >> "$OUT/$name.build.log" 2>&1
    kas shell "$KAS_CFG:$GEN/$name.yml" -c 'bitbake copperspice' \
-      > "$OUT/$name.build.log" 2>&1
+      >> "$OUT/$name.build.log" 2>&1
    if [ $? -ne 0 ]; then
       if [ "$BESTEFFORT" = 1 ]; then
          record "$name" "BESTEFFORT-FAIL" "build failed; see $OUT/$name.build.log"

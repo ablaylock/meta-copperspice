@@ -85,7 +85,7 @@ PACKAGECONFIG[pulseaudio]  = ",-DCMAKE_DISABLE_FIND_PACKAGE_PulseAudio=TRUE,puls
 PACKAGECONFIG[glib]        = ",-DCMAKE_DISABLE_FIND_PACKAGE_GLib2=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_GObject2=TRUE,glib-2.0"
 # XKBCommon (unlike XKBCommon_X11) serves both X11 and Wayland, so
 # libxkbcommon rides each platform knob rather than the disable list.
-PACKAGECONFIG[x11]         = ",-DCMAKE_DISABLE_FIND_PACKAGE_XCB=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_XKBCommon_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11_XCB=TRUE,libx11 libxcb libxcursor libxi libxinerama libxkbcommon xcb-util xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm"
+PACKAGECONFIG[x11]         = ",-DCMAKE_DISABLE_FIND_PACKAGE_XCB=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_XKBCommon_X11=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_X11_XCB=TRUE,libice libsm libx11 libxcb libxcursor libxi libxinerama libxkbcommon xcb-util xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm"
 # Wayland support lands in Phase 2 (needs cs_wayland_scanner from
 # copperspice-native); selecting it is rejected at parse time below. The
 # knob exists now so its OFF side keeps wayland detection deterministic.
@@ -112,7 +112,7 @@ python __anonymous() {
                  "in copperspice-native); use 'x11'")
 
     rules = {
-        'multimedia':  ['gui', 'network', 'opengl'],
+        'multimedia':  ['gui', 'network', 'opengl', 'glib'],
         'opengl':      ['gui'],
         'svg':         ['gui'],
         'xmlpatterns': ['network'],
