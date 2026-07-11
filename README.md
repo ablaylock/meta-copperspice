@@ -52,7 +52,7 @@ poky's default.)
 | `openssl` | TLS support | see runtime note below |
 | `cups` | printing support | CUPS printer driver |
 | `glib` | glib event-loop integration | glib mainloop hookup |
-| `pulseaudio` | PulseAudio detection | (unused by CS 2.1.0; ALSA too) |
+| `pulseaudio` | CsMultimedia audio output backend (libpulse) | no audio playback (CsMultimedia still does everything else) |
 | `x11` | XCB/X11 platform plugin | the only usable platform plugin today |
 
 `gui`, `network`, `opengl`, `svg`, `sql`, `xmlpatterns`, `vulkan`, and
@@ -83,6 +83,10 @@ library. CsGui itself always compiles its `QOpenGL*` classes and links
 `libGL`, so any `gui` build needs the `opengl` `DISTRO_FEATURE` regardless
 of whether the `opengl` knob is enabled.
 
+**Audio:** PulseAudio (via the `pulseaudio` knob) is CopperSpice's only
+audio output backend at the CS level; ALSA support is dead code upstream
+and this layer does not build against it.
+
 `psql`, `mysql`, and `odbc` need their client libraries from
 meta-openembedded's `meta-oe` layer, which this layer does not otherwise
 require — add `meta-oe` to `bblayers.conf` before enabling them (see
@@ -100,9 +104,11 @@ offers it, not verified by this layer.
 To override the defaults, set `PACKAGECONFIG:pn-copperspice` in
 `local.conf`, or a kas `local_conf_header` fragment. Known-good minimal
 configs: `headless` (`PACKAGECONFIG = ""`, CsCore+CsXml only) and
-`min-gui` (`PACKAGECONFIG = "gui network x11"`). Run
-`scripts/knob-audit.sh` (from the workspace root) to validate a custom
-selection.
+`min-gui` (`PACKAGECONFIG = "gui network x11"`). `scripts/knob-audit.sh`
+only accepts its 17 predefined config names (see the `ALL` list at the
+top of the script, or pass `all` to run every one); to validate a custom
+selection, add a case for it to the script's `configure()` function and
+run that.
 
 ## Quick start (kas)
 
