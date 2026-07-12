@@ -30,6 +30,7 @@ $SSH root@localhost \
   "rm -rf /tmp/svgdump && $ENVSTR cs-svg-repro --dump /tmp/svgdump --iterations $ITER" \
   || { echo "FAIL: cs-svg-repro --dump on target" >&2; exit 1; }
 
+rm -rf "$ROOT/$MACHINE"
 mkdir -p "$ROOT/$MACHINE"
 scp -P 2222 $COMMON "root@localhost:/tmp/svgdump/*" "$ROOT/$MACHINE/" \
   || { echo "FAIL: scp" >&2; exit 1; }
