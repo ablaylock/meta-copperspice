@@ -9,6 +9,7 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=ff94566f728b63bc7cfa537805eacf36"
 SRC_URI = " \
     git://github.com/copperspice/kitchensink.git;protocol=https;branch=master \
     file://0001-cmake-link-OpenGL-explicitly-on-Linux-BSD.patch \
+    file://0002-svg_view-initialize-the-SVG-buffer-image-before-rend.patch \
     file://kitchensink.desktop \
 "
 # tag ks-2.1.0

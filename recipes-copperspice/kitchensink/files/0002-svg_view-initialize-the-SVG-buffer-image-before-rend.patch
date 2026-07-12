@@ -1,0 +1,29 @@
+From: Allen Blaylock <alblay.lhs@gmail.com>
+Date: Sun, 12 Jul 2026 12:00:00 +0000
+Subject: [PATCH] svg_view: initialize the SVG buffer image before rendering
+
+QImage's size constructor leaves the pixel data uninitialized. The SVG
+is rendered on top, but every pixel the artwork does not cover keeps
+whatever happened to be in the heap, which shows up as random noise
+around the image on platforms where the allocator hands back dirty
+memory (observed on qemuarm and qemuarm64).
+
+Clear the buffer to transparent before rendering.
+
+Upstream-Status: Pending
+Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
+---
+ src/svg_view.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/svg_view.cpp b/src/svg_view.cpp
+--- a/src/svg_view.cpp
++++ b/src/svg_view.cpp
+@@ -61,6 +61,7 @@ void Svg_View::insertTextObject()
+    QSvgRenderer renderer(svgData);
+ 
+    QImage svgBufferImage(renderer.defaultSize(), QImage::Format_ARGB32);
++   svgBufferImage.fill(Qt::transparent);
+    QPainter painter(&svgBufferImage);
+    renderer.render(&painter, svgBufferImage.rect());
+ 
