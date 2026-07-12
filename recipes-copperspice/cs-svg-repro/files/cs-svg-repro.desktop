@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=SVG Corruption Repro
+Comment=KitchenSink SVG pipeline repro
+Exec=cs-svg-repro
+Icon=utilities-terminal
+Categories=Utility;

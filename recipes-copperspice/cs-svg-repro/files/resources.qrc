@@ -1,0 +1,10 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+   <file>resources/pineapple.svg</file>
+   <file>resources/watermelon.svg</file>
+   <file>resources/cake1.svg</file>
+   <file>resources/cake2.svg</file>
+   <file>resources/cup_cake.svg</file>
+   <file>resources/ice_cream.svg</file>
+</qresource>
+</RCC>
