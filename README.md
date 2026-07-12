@@ -251,7 +251,7 @@ The class pulls in `copperspice` + `copperspice-native` and passes all five
   unstripped `libCsGui2.1.so` exceeds the 4 GiB ELF32 file-offset limit
   and the linker emits a structurally broken library.
 - CopperSpice wants roughly 4 GB RAM per compile thread; the recipe pins
-  `PARALLEL_MAKE = "-j 6"`. On smaller hosts lower it further.
+  `PARALLEL_MAKE = "-j 10"`. On smaller hosts lower it further.
 - Upstream publishes no tarball checksums; the recipe pins a sha256
   computed from the tarball at recipe-creation time (2026-07-08).
 
