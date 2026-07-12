@@ -1,8 +1,8 @@
 # Inherit this class in recipes that build CopperSpice applications.
 # It wires the cross-compile tool split: libraries come from the target
-# copperspice build, while uic/rcc/lrelease/lconvert/lupdate come from
-# copperspice-native (the CS_TOOL_* variables are honored by the patched
-# CopperSpiceConfig.cmake).
+# copperspice build, while uic/rcc/lrelease/lconvert/lupdate and
+# cs_wayland_scanner come from copperspice-native (the CS_TOOL_*
+# variables are honored by the patched CopperSpiceConfig.cmake).
 
 inherit cmake pkgconfig
 
@@ -17,6 +17,7 @@ EXTRA_OECMAKE:append = " \
     -DCS_TOOL_LRELEASE=${STAGING_BINDIR_NATIVE}/lrelease \
     -DCS_TOOL_LCONVERT=${STAGING_BINDIR_NATIVE}/lconvert \
     -DCS_TOOL_LUPDATE=${STAGING_BINDIR_NATIVE}/lupdate \
+    -DCS_TOOL_CS_WAYLAND_SCANNER=${STAGING_BINDIR_NATIVE}/cs_wayland_scanner \
 "
 
 # rcc records the absolute path of every input file as a comment in its

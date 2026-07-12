@@ -224,8 +224,9 @@ FILES_SOLIBSDEV = ""
 
 PACKAGES =+ "${PN}-tools"
 
-# Target-arch uic/rcc/lrelease/lconvert/lupdate/linguist: only useful for
-# doing development ON the device. Host builds use copperspice-native;
+# Target-arch uic/rcc/lrelease/lconvert/lupdate/linguist (plus
+# cs_wayland_scanner on wayland builds): only useful for doing
+# development ON the device. Host builds use copperspice-native;
 # images must not pull this in.
 FILES:${PN}-tools = "${bindir}"
 

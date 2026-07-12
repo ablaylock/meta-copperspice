@@ -204,11 +204,11 @@ the build machine, so this layer builds them twice:
 - The target `copperspice` build points its own tool invocations at the
   native `uic`/`rcc`/`lrelease` (and, when the `wayland` knob is on,
   `cs_wayland_scanner` — the only tools CopperSpice runs while building
-  itself), and consumer recipes point all five non-scanner tools, via the
+  itself), and consumer recipes point all six tools, via the
   `CS_TOOL_UIC`, `CS_TOOL_RCC`, `CS_TOOL_LRELEASE`, `CS_TOOL_LCONVERT`,
-  `CS_TOOL_LUPDATE` CMake cache variables (a `CS_TOOL_CS_WAYLAND_SCANNER`
-  variable also exists for projects that process their own Wayland
-  protocol XML). These variables are added by carried patches 0001
+  `CS_TOOL_LUPDATE`, and `CS_TOOL_CS_WAYLAND_SCANNER` CMake cache
+  variables (the last one matters to projects that process their own
+  Wayland protocol XML). These variables are added by carried patches 0001
   (CopperSpice's own build) and 0002 (the exported
   `CopperSpiceConfig.cmake`, so any `find_package(CopperSpice)` project
   gets them); they are no-ops when unset, leaving native builds and
@@ -220,7 +220,7 @@ Application recipes only need:
 inherit copperspice
 ```
 
-The class pulls in `copperspice` + `copperspice-native` and passes all five
+The class pulls in `copperspice` + `copperspice-native` and passes all six
 `CS_TOOL_*` variables. `cs-hello` is the reference consumer.
 
 ## Packaging notes
