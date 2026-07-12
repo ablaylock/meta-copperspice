@@ -3,7 +3,7 @@ require recipes-sato/images/core-image-sato.bb
 DESCRIPTION = "core-image-sato plus the CopperSpice demo applications, \
 used to verify CopperSpice on the QEMU machines"
 
-IMAGE_INSTALL += "cs-hello kitchensink"
+IMAGE_INSTALL += "cs-hello kitchensink cs-svg-repro"
 
 # SDKs generated from this image ship the CopperSpice host libraries AND
 # the host tools: the ${PN}-tools split (which keeps uic/rcc out of target

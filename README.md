@@ -23,8 +23,8 @@ host/target tool split, and GUI boot in QEMU checked on all three.
   `recipes-copperspice/cs-hello/files/CMakeLists.txt`).
 - `kitchensink` — the official CopperSpice demo app.
 - `copperspice-demo-image` — sato-based image with both demos.
-- `copperspice-demo-image-weston` — `core-image-weston` plus both demos,
-  used to verify the Wayland platform plugin on QEMU.
+- `copperspice-demo-image-weston` — `core-image-weston` plus all three demos
+  (cs-hello, kitchensink, and cs-svg-repro), used to verify the Wayland platform plugin on QEMU.
 - kas configs for reproducible builds on the three QEMU machines, plus
   `kas/wayland-only.yml` (drops `x11` from `DISTRO_FEATURES` and adds
   `glvnd`, for a pure-Wayland world) and `kas/gates.yml` (passwordless
