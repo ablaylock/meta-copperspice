@@ -6,26 +6,26 @@
 
 #include <QApplication>
 #include <QString>
-#include <QStringList>
 
 #include <cstdio>
 #include <cstdlib>
 
 int main(int argc, char *argv[])
 {
-   QApplication app(argc, argv);
-
    QString dumpDir;
    int iterations = 1;
 
-   QStringList args = app.arguments();
+   // parse plain argv before the QApplication constructor runs:
+   // CS 2.1.0 QApplication::arguments() returns argv[1] duplicated into
+   // every later position, and the constructor may also rewrite argv
+   for (int i = 1; i < argc; ++i) {
+      QString arg = QString::fromUtf8(argv[i]);
 
-   for (int i = 1; i < args.size(); ++i) {
-      if (args[i] == "--dump" && i + 1 < args.size()) {
-         dumpDir = args[++i];
+      if (arg == "--dump" && i + 1 < argc) {
+         dumpDir = QString::fromUtf8(argv[++i]);
 
-      } else if (args[i] == "--iterations" && i + 1 < args.size()) {
-         iterations = std::atoi(args[++i].toUtf8().constData());
+      } else if (arg == "--iterations" && i + 1 < argc) {
+         iterations = std::atoi(argv[++i]);
 
          if (iterations < 1) {
             std::fprintf(stderr, "cs-svg-repro: --iterations requires a positive integer\n");
@@ -37,6 +37,8 @@ int main(int argc, char *argv[])
          return 2;
       }
    }
+
+   QApplication app(argc, argv);
 
    if (! dumpDir.isEmpty()) {
       QString errorMsg;
