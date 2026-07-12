@@ -1,4 +1,4 @@
-From cc869e51c59252d16859eac3d1d006009ab89601 Mon Sep 17 00:00:00 2001
+From a71b68479c46cbf26d9216cea4ac99f07ee2b54b Mon Sep 17 00:00:00 2001
 From: Allen Blaylock <alblay.lhs@gmail.com>
 Date: Sat, 11 Jul 2026 05:44:30 -0600
 Subject: [PATCH] cmake: locate EGL without FindOpenGL for the Wayland plugin
@@ -25,24 +25,34 @@ Upstream-Status: Pending
 
 Signed-off-by: Allen Blaylock <alblay.lhs@gmail.com>
 ---
- CMakeLists.txt | 19 ++++++++++++++++++-
- 1 file changed, 18 insertions(+), 1 deletion(-)
+ CMakeLists.txt | 31 +++++++++++++++++++++++++------
+ 1 file changed, 25 insertions(+), 6 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index dc1aa62..79dac31 100644
+index dc1aa62..8c89d40 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -597,7 +597,24 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
-          # library, which systems with legacy (non-GLVND) Mesa do not
-          # have, and the failure also breaks the later unqualified
-          # find_package(OpenGL) call because OPENGL_USE_EGL persists.
+@@ -592,12 +592,31 @@ if (CMAKE_SYSTEM_NAME MATCHES "(Linux|OpenBSD|FreeBSD|NetBSD|DragonFly)")
+       )
+ 
+       if (Wayland_FOUND)
+-         # EGL is only used by the Wayland display plugin. Requesting the
+-         # EGL component makes FindOpenGL require the GLVND libOpenGL
+-         # library, which systems with legacy (non-GLVND) Mesa do not
+-         # have, and the failure also breaks the later unqualified
+-         # find_package(OpenGL) call because OPENGL_USE_EGL persists.
 -         find_package(OpenGL COMPONENTS EGL)
-+         # Locate EGL directly: requesting the EGL component would switch
-+         # FindOpenGL into GLVND mode, which legacy Mesa cannot satisfy.
-+         # The EGL platform plugin calls gl* entry points directly, so the
-+         # target must carry a GL implementation in its link interface just
-+         # as FindOpenGL links OpenGL::EGL against the GLVND OpenGL::OpenGL;
-+         # on legacy Mesa those entry points live in libGL.
++         # EGL is only used by the Wayland display plugin. Locate it
++         # directly instead of requesting FindOpenGL's EGL component:
++         # that request switches FindOpenGL into GLVND mode, which
++         # legacy (non-GLVND) Mesa cannot satisfy, and the poisoned
++         # imported targets persist into the later unqualified
++         # find_package(OpenGL) call, leaving CsGui without a GL
++         # library. The EGL platform plugin calls gl* entry points
++         # directly, so the target must carry a GL implementation in
++         # its link interface just as FindOpenGL links OpenGL::EGL
++         # against the GLVND OpenGL::OpenGL; on legacy Mesa those
++         # entry points live in libGL, on GLVND systems in libOpenGL.
 +         find_library(CS_EGL_LIBRARY NAMES EGL)
 +         find_path(CS_EGL_INCLUDE_DIR NAMES EGL/egl.h)
 +         find_library(CS_EGL_GL_LIBRARY NAMES GL OpenGL)
@@ -54,6 +64,8 @@ index dc1aa62..79dac31 100644
 +               INTERFACE_INCLUDE_DIRECTORIES "${CS_EGL_INCLUDE_DIR}"
 +               INTERFACE_LINK_LIBRARIES "${CS_EGL_GL_LIBRARY}"
 +            )
++         elseif (NOT TARGET OpenGL::EGL)
++            message(STATUS "Wayland was found but EGL or a GL dispatch library is missing, the Wayland platform plugin will not be built")
 +         endif()
        endif()
     endif()
