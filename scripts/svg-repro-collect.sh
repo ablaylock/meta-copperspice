@@ -27,7 +27,7 @@ ENVSTR=$($SSH root@localhost '
 echo "target env: $ENVSTR"
 
 $SSH root@localhost \
-  "rm -rf /tmp/svgdump && $ENVSTR cs-svg-repro --dump /tmp/svgdump --iterations $ITER" \
+  "sh -lc 'rm -rf /tmp/svgdump && $ENVSTR cs-svg-repro --dump /tmp/svgdump --iterations $ITER'" \
   || { echo "FAIL: cs-svg-repro --dump on target" >&2; exit 1; }
 
 rm -rf "$ROOT/$MACHINE"
